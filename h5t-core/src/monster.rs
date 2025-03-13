@@ -11,6 +11,13 @@ pub struct AbilityScores {
     pub charisma: i32,
 }
 
+impl AbilityScores {
+    /// Calculate the modifier for an ability score.
+    pub fn modifier(score: i32) -> i32 {
+        (score - 10) / 2
+    }
+}
+
 /// A creature's size.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum Size {

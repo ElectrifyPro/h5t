@@ -1,4 +1,8 @@
-pub use h5t_core::{Monster, Tracker};
+mod monster;
+
+use crossterm::event::read;
+use h5t_core::{Combatant, Monster, Tracker};
+use monster::MonsterCard;
 
 fn main() {
     // NOTE: monster JSON data provided courtesy of https://www.dnd5eapi.co/
@@ -15,8 +19,21 @@ fn main() {
         find("ogre").into(),
         find("tarrasque").into(),
     ]);
-    for _ in 0..100 {
-        println!("({}, {})", tracker.round, tracker.turn);
+
+    let mut terminal = ratatui::init();
+
+    for _ in 0..3 {
+        // println!("({}, {})", tracker.round, tracker.turn);
+        // println!("{:#?}", tracker.current_combatant());
+        // print a nice card
+        terminal.draw(|frame| {
+            let area = frame.area();
+            let Combatant::Monster(monster) = tracker.current_combatant();
+            frame.render_widget(MonsterCard::new(monster), area);
+        }).unwrap();
+        read().unwrap();
         tracker.next_turn();
     }
+
+    ratatui::restore();
 }
