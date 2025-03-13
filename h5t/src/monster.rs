@@ -1,5 +1,42 @@
-use h5t_core::{monster::{AbilityScores, Usage}, Monster};
+use h5t_core::{monster::{AbilityScores, Size, Type, Usage}, Monster};
 use ratatui::{prelude::*, widgets::*};
+
+/// Creates a [`Paragraph`] widget for displaying the monster's name and type.
+fn name_and_type_paragraph(monster: &Monster) -> Paragraph {
+    let size = match monster.size {
+        Size::Tiny => "Tiny",
+        Size::Small => "Small",
+        Size::Medium => "Medium",
+        Size::Large => "Large",
+        Size::Huge => "Huge",
+        Size::Gargantuan => "Gargantuan",
+    };
+    let r#type = match monster.r#type {
+        Type::Aberration => "Aberration",
+        Type::Beast => "Beast",
+        Type::Celestial => "Celestial",
+        Type::Construct => "Construct",
+        Type::Dragon => "Dragon",
+        Type::Elemental => "Elemental",
+        Type::Fey => "Fey",
+        Type::Fiend => "Fiend",
+        Type::Giant => "Giant",
+        Type::Humanoid => "Humanoid",
+        Type::Monstrosity => "Monstrosity",
+        Type::Ooze => "Ooze",
+        Type::Plant => "Plant",
+        Type::Undead => "Undead",
+        Type::Other => "Other",
+    };
+    Paragraph::new(vec![
+        Span::styled(&monster.name, Modifier::BOLD).into(),
+        Line::from(vec![
+            Span::raw(size),
+            Span::raw(" "),
+            Span::raw(r#type),
+        ]).style(Modifier::ITALIC),
+    ])
+}
 
 /// Creates a [`Table`] widget for displaying a monster's ability scores.
 fn ability_scores_table(monster: &Monster) -> Table {
@@ -57,7 +94,7 @@ fn ability_scores_table(monster: &Monster) -> Table {
 fn special_abilities_paragraph(monster: &Monster) -> Paragraph {
     use itertools::Itertools;
 
-    let mut text = monster
+    let text = monster
         .special_abilities
         .iter()
         .map(|ability| {
@@ -106,7 +143,7 @@ impl<'a> Widget for MonsterCard<'a> {
         );
 
         let layout = Layout::vertical([
-            Constraint::Length(1), // name
+            Constraint::Length(2), // name and type
             Constraint::Length(6), // ability scores
             Constraint::Min(1), // special abilities
         ])
@@ -116,7 +153,7 @@ impl<'a> Widget for MonsterCard<'a> {
             .split(area);
         let [name, ability_scores, special_abilities] = [layout[0], layout[1], layout[2]];
 
-        Widget::render(Text::styled(&self.monster.name, Modifier::BOLD), name, buf);
+        Widget::render(name_and_type_paragraph(self.monster), name, buf);
         Widget::render(ability_scores_table(self.monster), ability_scores, buf);
         Widget::render(special_abilities_paragraph(self.monster), special_abilities, buf);
     }
