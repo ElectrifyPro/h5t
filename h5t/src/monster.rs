@@ -1,4 +1,4 @@
-use h5t_core::{monster::AbilityScores, Monster};
+use h5t_core::{monster::{AbilityScores, Usage}, Monster};
 use ratatui::{prelude::*, widgets::*};
 
 /// Creates a [`Table`] widget for displaying a monster's ability scores.
@@ -53,6 +53,32 @@ fn ability_scores_table(monster: &Monster) -> Table {
     )
 }
 
+/// Creates a [`Paragraph`] widget for displaying a monster's special abilities.
+fn special_abilities_paragraph(monster: &Monster) -> Paragraph {
+    use itertools::Itertools;
+
+    let mut text = monster
+        .special_abilities
+        .iter()
+        .map(|ability| {
+            let constraint = match ability.usage {
+                Usage::PerDay(count) => format!(" ({}/Day). ", count),
+                Usage::RechargeAfterRest => " (Recharges after a Short or Long Rest). ".to_string(),
+                Usage::RechargeAfterLongRest => " (Recharges after a Long Rest). ".to_string(),
+                Usage::AtWill => ". ".to_string(),
+            };
+            Line::from(vec![
+                Span::styled(&ability.name, Modifier::BOLD | Modifier::ITALIC),
+                Span::styled(constraint, Modifier::BOLD | Modifier::ITALIC),
+                Span::raw(&ability.desc),
+            ])
+        })
+        .intersperse(Line::raw(""))
+        .collect::<Vec<_>>();
+    Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+}
+
 /// A card widget for displaying a monster's statistics.
 #[derive(Debug)]
 pub struct MonsterCard<'a> {
@@ -82,13 +108,16 @@ impl<'a> Widget for MonsterCard<'a> {
         let layout = Layout::vertical([
             Constraint::Length(1), // name
             Constraint::Length(6), // ability scores
+            Constraint::Min(1), // special abilities
         ])
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
+            .spacing(1)
             .split(area);
-        let [name, ability_scores] = [layout[0], layout[1]];
+        let [name, ability_scores, special_abilities] = [layout[0], layout[1], layout[2]];
 
         Widget::render(Text::styled(&self.monster.name, Modifier::BOLD), name, buf);
         Widget::render(ability_scores_table(self.monster), ability_scores, buf);
+        Widget::render(special_abilities_paragraph(self.monster), special_abilities, buf);
     }
 }

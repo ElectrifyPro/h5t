@@ -16,7 +16,7 @@ fn main() {
 
     let mut tracker = Tracker::new(vec![
         find("goblin").into(),
-        find("ogre").into(),
+        find("boar").into(),
         find("tarrasque").into(),
     ]);
 
