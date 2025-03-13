@@ -6,8 +6,16 @@ version = 3
 name = "h5t"
 version = "0.1.0"
 dependencies = [
+ "h5t-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "h5t-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
