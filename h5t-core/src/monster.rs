@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// The ability scores of a creature.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct AbilityScores {
     pub strength: i32,
     pub dexterity: i32,
@@ -12,8 +12,9 @@ pub struct AbilityScores {
 }
 
 /// A creature's size.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum Size {
+    #[default]
     Tiny,
     Small,
     Medium,
@@ -23,7 +24,7 @@ pub enum Size {
 }
 
 /// A creature's type.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Type {
     Aberration,
@@ -41,12 +42,13 @@ pub enum Type {
     Plant,
     Undead,
 
+    #[default]
     #[serde(other)] // TODO: capture the value of the "other" case
     Other,
 }
 
 /// A pre-made monster from the System Reference Document (SRD), or a custom monster.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Monster {
     /// The monster's index, used for identification.
     pub index: String,
