@@ -1,5 +1,14 @@
-use h5t_core::{monster::{AbilityScores, Size, Type, Usage}, Monster};
+use h5t_core::{monster::{AbilityScores, Size, Speed, Type, Usage}, Monster};
 use ratatui::{prelude::*, widgets::*};
+
+/// Formats a modifier-like value in the form `(±X)`.
+fn fmt_mod(paren: bool, modifier: i32) -> String {
+    if paren {
+        format!("({:+})", modifier)
+    } else {
+        format!("{:+}", modifier)
+    }
+}
 
 /// Creates a [`Paragraph`] widget for displaying the monster's name and type.
 fn name_and_type_paragraph(monster: &Monster) -> Paragraph {
@@ -28,23 +37,104 @@ fn name_and_type_paragraph(monster: &Monster) -> Paragraph {
         Type::Undead => "Undead",
         Type::Other => "Other",
     };
+    let subtype = if let Some(subtype) = &monster.subtype {
+        format!(" ({})", subtype)
+    } else {
+        "".to_string()
+    };
+
     Paragraph::new(vec![
         Span::styled(&monster.name, Modifier::BOLD).into(),
         Line::from(vec![
             Span::raw(size),
             Span::raw(" "),
             Span::raw(r#type),
+            Span::raw(", "),
+            Span::raw(&monster.alignment),
+            Span::raw(subtype),
         ]).style(Modifier::ITALIC),
     ])
 }
 
-/// Creates a [`Table`] widget for displaying a monster's ability scores.
-fn ability_scores_table(monster: &Monster) -> Table {
-    /// Formats an ability modifier in the form `(±X)`.
-    fn fmt_mod(modifier: i32) -> String {
-        format!("({}{})", if modifier >= 0 { "+" } else { "" }, modifier)
+/// Creates a [`Table`] widget for displaying a monster's basic statistics.
+fn basic_stats_table(monster: &Monster) -> Table {
+    /// Format's a speed value.
+    fn fmt_speed(speed: &Speed) -> String {
+        let mut parts = String::new();
+        if let Some(speed) = &speed.walk {
+            parts.push_str(speed);
+            parts.push_str(", ");
+        }
+        if let Some(speed) = &speed.burrow {
+            parts.push_str("burrow ");
+            parts.push_str(speed);
+            parts.push_str(", ");
+        }
+        if let Some(speed) = &speed.climb {
+            parts.push_str("climb ");
+            parts.push_str(speed);
+            parts.push_str(", ");
+        }
+        if let Some(speed) = &speed.fly {
+            parts.push_str("fly ");
+            parts.push_str(speed);
+            parts.push_str(", ");
+        }
+        if let Some(speed) = &speed.swim {
+            parts.push_str("swim ");
+            parts.push_str(speed);
+            parts.push_str(", ");
+        }
+        parts.pop(); // remove trailing comma
+        parts.pop(); // remove trailing space
+        parts
     }
 
+    /// Formats a challenge rating.
+    fn fmt_cr(cr: f32, xp: i32) -> String {
+        let cr_value = if cr == 0.0 {
+            "0".to_string()
+        } else if cr < 1.0 {
+            format!("1/{}", 1.0 / cr)
+        } else {
+            cr.to_string()
+        };
+
+        format!("{} ({} XP)", cr_value, xp)
+    }
+
+    Table::new(
+        vec![
+            Row::new(vec![
+                Text::styled("Armor Class", Modifier::BOLD),
+                Text::raw(monster.armor_class.value.to_string()),
+            ]),
+            Row::new(vec![
+                Text::styled("Hit Points", Modifier::BOLD),
+                Text::raw(format!("{} ({})", monster.hit_points, monster.hit_points_roll)),
+            ]),
+            Row::new(vec![
+                Text::styled("Speed", Modifier::BOLD),
+                Text::raw(fmt_speed(&monster.speed)),
+            ]),
+            Row::new(vec![
+                Text::styled("Challenge", Modifier::BOLD),
+                Text::raw(fmt_cr(monster.challenge_rating, monster.xp)),
+            ]),
+            Row::new(vec![
+                Text::styled("Proficiency Bonus", Modifier::BOLD),
+                Text::raw(fmt_mod(false, monster.proficiency_bonus)),
+            ]),
+        ],
+        vec![
+            Constraint::Percentage(50), // stat name
+            Constraint::Percentage(50), // stat value
+        ],
+    )
+}
+
+/// Creates a [`Table`] widget for displaying a monster's ability scores.
+fn ability_scores_table(monster: &Monster) -> Table {
     let (str, dex, con, int, wis, cha) = (
         monster.scores.strength,
         monster.scores.dexterity,
@@ -55,7 +145,7 @@ fn ability_scores_table(monster: &Monster) -> Table {
     );
 
     /// Helper to build a row for the ability scores table.
-    fn row(ability: &str, score: i32) -> Row {
+    fn row(odd: bool, ability: &str, score: i32) -> Row {
         // more green for high scores, more red for low scores
         // 0: (255, 0, 0)
         // 10: (255, 255, 255)
@@ -69,22 +159,23 @@ fn ability_scores_table(monster: &Monster) -> Table {
         Row::new(vec![
             Text::styled(ability, Modifier::BOLD),
             Text::styled(score.to_string(), color),
-            Text::styled(fmt_mod(AbilityScores::modifier(score)), color),
+            Text::styled(fmt_mod(true, AbilityScores::modifier(score)), color),
         ])
+            .style(Style::default().bg(if odd { Color::DarkGray } else { Color::Black }))
     }
 
     Table::new(
         vec![
-            row("STR", str),
-            row("DEX", dex),
-            row("CON", con),
-            row("INT", int),
-            row("WIS", wis),
-            row("CHA", cha),
+            row(false, "STR", str),
+            row(true, "DEX", dex),
+            row(false, "CON", con),
+            row(true, "INT", int),
+            row(false, "WIS", wis),
+            row(true, "CHA", cha),
         ],
         vec![
             Constraint::Percentage(50), // ability abbreviation
-            Constraint::Max(4),         // ability score
+            Constraint::Length(3),         // ability score
             Constraint::Min(4),         // modifier
         ],
     )
@@ -144,6 +235,7 @@ impl<'a> Widget for MonsterCard<'a> {
 
         let layout = Layout::vertical([
             Constraint::Length(2), // name and type
+            Constraint::Length(4), // basic stats
             Constraint::Length(6), // ability scores
             Constraint::Min(1), // special abilities
         ])
@@ -151,9 +243,15 @@ impl<'a> Widget for MonsterCard<'a> {
             .vertical_margin(1) // avoid the border
             .spacing(1)
             .split(area);
-        let [name, ability_scores, special_abilities] = [layout[0], layout[1], layout[2]];
+        let [
+            name,
+            basic_stats,
+            ability_scores,
+            special_abilities
+        ] = [layout[0], layout[1], layout[2], layout[3]];
 
         Widget::render(name_and_type_paragraph(self.monster), name, buf);
+        Widget::render(basic_stats_table(self.monster), basic_stats, buf);
         Widget::render(ability_scores_table(self.monster), ability_scores, buf);
         Widget::render(special_abilities_paragraph(self.monster), special_abilities, buf);
     }
