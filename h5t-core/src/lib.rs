@@ -4,6 +4,25 @@ pub mod monster;
 pub use ability::{Ability, score_to_modifier};
 pub use monster::Monster;
 
+/// The number of actions, bonus actions, and reactions a combatant has.
+#[derive(Clone, Copy, Debug)]
+pub struct Action {
+    pub actions: u32,
+    pub bonus_actions: u32,
+    pub reactions: u32,
+}
+
+/// By default, a combatant has one action, one bonus action, and one reaction.
+impl Default for Action {
+    fn default() -> Self {
+        Self {
+            actions: 1,
+            bonus_actions: 1,
+            reactions: 1,
+        }
+    }
+}
+
 /// A combatant in the initiative tracker.
 ///
 /// Combatants can include player characters, monsters, NPCs, etc.
@@ -14,6 +33,9 @@ pub struct Combatant {
 
     /// The combatant's current hit points.
     pub hit_points: i32,
+
+    /// The actions available to the combatant.
+    pub actions: Action,
 }
 
 impl From<CombatantKind> for Combatant {
@@ -58,6 +80,7 @@ impl From<Monster> for Combatant {
         Self {
             hit_points: monster.hit_points,
             kind: monster.into(),
+            actions: Action::default(),
         }
     }
 }
@@ -99,6 +122,20 @@ impl Tracker {
     /// Get the combatant that is currently taking their turn.
     pub fn current_combatant(&self) -> &Combatant {
         &self.combatants[self.turn]
+    }
+
+    /// Use an action for the current combatant. Returns `true` if the action was used, or `false`
+    /// if the combatant had no actions left to use.
+    ///
+    /// This function only decrements the number of actions available to the combatant, meaning the
+    /// combat log will not display any information about the action taken.
+    pub fn use_action(&mut self) -> bool {
+        let count = &mut self.combatants[self.turn].actions.actions;
+        if *count == 0 {
+            return false;
+        }
+        *count = count.saturating_sub(1);
+        true
     }
 }
 

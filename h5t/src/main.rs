@@ -30,6 +30,10 @@ fn main() {
         }).unwrap();
         if let Ok(Event::Key(key)) = read() {
             match key.code {
+                KeyCode::Char('a') => {
+                    tracker.use_action();
+                    continue;
+                },
                 KeyCode::Char('q') => break,
                 _ => (),
             }
