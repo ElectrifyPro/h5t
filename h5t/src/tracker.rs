@@ -5,7 +5,7 @@ use ratatui::{prelude::*, widgets::*};
 fn action_line(actions: Action) -> Line<'static> {
     /// Format multiple actions in a compact way (e.g. `Ax4,R`).
     fn fmt_action(label: &str, count: u32) -> String {
-        if count < 3 {
+        if count <= 3 {
             label.repeat(count as usize)
         } else {
             format!("{}x{}", label, count)

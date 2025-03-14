@@ -39,6 +39,14 @@ fn main() {
                     tracker.use_action();
                     continue;
                 },
+                KeyCode::Char('b') => {
+                    tracker.use_bonus_action();
+                    continue;
+                },
+                KeyCode::Char('r') => {
+                    tracker.use_reaction();
+                    continue;
+                },
                 KeyCode::Char('q') => break,
                 _ => (),
             }

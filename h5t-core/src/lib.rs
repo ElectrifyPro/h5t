@@ -137,6 +137,34 @@ impl Tracker {
         *count = count.saturating_sub(1);
         true
     }
+
+    /// Use a bonus action for the current combatant. Returns `true` if the bonus action was used,
+    /// or `false` if the combatant had no bonus actions left to use.
+    ///
+    /// This function only decrements the number of bonus actions available to the combatant,
+    /// meaning the combat log will not display any information about the bonus action taken.
+    pub fn use_bonus_action(&mut self) -> bool {
+        let count = &mut self.combatants[self.turn].actions.bonus_actions;
+        if *count == 0 {
+            return false;
+        }
+        *count = count.saturating_sub(1);
+        true
+    }
+
+    /// Use a reaction for the current combatant. Returns `true` if the reaction was used, or
+    /// `false` if the combatant had no reactions left to use.
+    ///
+    /// This function only decrements the number of reactions available to the combatant, meaning
+    /// the combat log will not display any information about the reaction taken.
+    pub fn use_reaction(&mut self) -> bool {
+        let count = &mut self.combatants[self.turn].actions.reactions;
+        if *count == 0 {
+            return false;
+        }
+        *count = count.saturating_sub(1);
+        true
+    }
 }
 
 #[cfg(test)]
