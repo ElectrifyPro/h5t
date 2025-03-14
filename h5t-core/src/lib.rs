@@ -1,5 +1,7 @@
+pub mod ability;
 pub mod monster;
 
+pub use ability::{Ability, score_to_modifier};
 pub use monster::Monster;
 
 /// A combatant in the initiative tracker.

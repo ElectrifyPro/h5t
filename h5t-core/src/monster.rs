@@ -1,25 +1,5 @@
+use crate::{ability::{Modifier, Score, Skill}, Ability};
 use serde::{Deserialize, Deserializer, Serialize};
-
-/// The ability scores of a creature.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct AbilityScores {
-    pub strength: i32,
-    pub dexterity: i32,
-    pub constitution: i32,
-    pub intelligence: i32,
-    pub wisdom: i32,
-    pub charisma: i32,
-}
-
-impl AbilityScores {
-    /// Calculate the modifier for an ability score.
-    pub fn modifier(score: i32) -> i32 {
-        // NOTE: the mathematically equivalent: (score - 10) / 2
-        // does not work since integer division will truncate the result, causing scores less than
-        // 10 to get rounded up instead of down; so we subtract at the end instead
-        score / 2 - 5
-    }
-}
 
 /// The source of a monster's armor class value.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -131,6 +111,83 @@ pub enum Type {
     Other,
 }
 
+/// A monster's proficiencies.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Proficiencies {
+    /// The monster's skill proficiencies.
+    ///
+    /// If the monster has proficiency in a skill, its modifier will be `Some`, and will contain
+    /// its proficiency bonus plus its ability modifier for the relevant ability score. Otherwise,
+    /// the value will be `None`, and the monster will use the ability modifier alone to calculate
+    /// the skill check.
+    #[serde(default)]
+    pub skills: Skill<Option<Modifier>>,
+
+    /// The monster's saving throw proficiencies.
+    ///
+    /// If the monster has proficiency in a saving throw, its modifier will be `Some`, and will
+    /// contain its proficiency bonus plus its ability modifier for the relevant ability score.
+    /// Otherwise, the value will be `None`, and the monster will use the ability modifier alone to
+    /// calculate the saving throw.
+    #[serde(default)]
+    pub saving_throws: Ability<Option<Modifier>>,
+}
+
+fn deserialize_proficiencies<'de, D>(d: D) -> Result<Proficiencies, D::Error>
+where D: Deserializer<'de>
+{
+    // api provides one array of modifiers for both skills and saving throws, they contain things
+    // like
+    //
+    // {"value": 11, "proficiency": {"index": "saving-throw-wis", ...}}
+
+    #[derive(Debug, Deserialize)]
+    struct ProfDataInner {
+        index: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ProfData {
+        value: u32,
+        proficiency: ProfDataInner,
+    }
+
+    let mut proficiencies = Proficiencies::default();
+    let data = Vec::<ProfData>::deserialize(d)?;
+    for prof in data {
+        let modifier = Some(prof.value as i32);
+        match prof.proficiency.index.as_str() {
+            "saving-throw-str" => proficiencies.saving_throws.strength = modifier,
+            "saving-throw-dex" => proficiencies.saving_throws.dexterity = modifier,
+            "saving-throw-con" => proficiencies.saving_throws.constitution = modifier,
+            "saving-throw-int" => proficiencies.saving_throws.intelligence = modifier,
+            "saving-throw-wis" => proficiencies.saving_throws.wisdom = modifier,
+            "saving-throw-cha" => proficiencies.saving_throws.charisma = modifier,
+            "skill-acrobatics" => proficiencies.skills.acrobatics = modifier,
+            "skill-animal-handling" => proficiencies.skills.animal_handling = modifier,
+            "skill-arcana" => proficiencies.skills.arcana = modifier,
+            "skill-athletics" => proficiencies.skills.athletics = modifier,
+            "skill-deception" => proficiencies.skills.deception = modifier,
+            "skill-history" => proficiencies.skills.history = modifier,
+            "skill-insight" => proficiencies.skills.insight = modifier,
+            "skill-intimidation" => proficiencies.skills.intimidation = modifier,
+            "skill-investigation" => proficiencies.skills.investigation = modifier,
+            "skill-medicine" => proficiencies.skills.medicine = modifier,
+            "skill-nature" => proficiencies.skills.nature = modifier,
+            "skill-perception" => proficiencies.skills.perception = modifier,
+            "skill-performance" => proficiencies.skills.performance = modifier,
+            "skill-persuasion" => proficiencies.skills.persuasion = modifier,
+            "skill-religion" => proficiencies.skills.religion = modifier,
+            "skill-sleight-of-hand" => proficiencies.skills.sleight_of_hand = modifier,
+            "skill-stealth" => proficiencies.skills.stealth = modifier,
+            "skill-survival" => proficiencies.skills.survival = modifier,
+            _ => (),
+        }
+    }
+
+    Ok(proficiencies)
+}
+
 /// A special ability that a monster has.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct SpecialAbility {
@@ -211,7 +268,7 @@ pub struct Monster {
 
     /// The monster's ability scores, used for calculating modifiers.
     #[serde(flatten)]
-    pub scores: AbilityScores,
+    pub scores: Ability<Score>,
 
     /// The monster's size, used to determine the amount of space it occupies on the battlefield.
     pub size: Size,
@@ -236,6 +293,10 @@ pub struct Monster {
     /// The different speeds the monster has, such as walking, flying, or swimming.
     pub speed: Speed,
 
+    // The monster's proficiencies, including its skill and saving throw proficiencies.
+    #[serde(default, deserialize_with = "deserialize_proficiencies")]
+    pub proficiencies: Proficiencies,
+
     /// The monster's chalenge rating. Can be `0.0`, `0.125`, `0.25`, `0.5`, or an integer from `1`
     /// to `30`.
     pub challenge_rating: f32,
@@ -254,7 +315,7 @@ pub struct Monster {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::score_to_modifier;
 
     /// Ensure the modifier calculation is correct.
     #[test]
@@ -293,7 +354,7 @@ mod tests {
         ];
 
         for (score, modifier) in tests.iter() {
-            assert_eq!(AbilityScores::modifier(*score), *modifier);
+            assert_eq!(score_to_modifier(*score), *modifier);
         }
     }
 }

@@ -1,13 +1,9 @@
-use h5t_core::{monster::{AbilityScores, Size, Speed, Type, Usage}, Monster};
+use h5t_core::{monster::{Size, Speed, Type, Usage}, Monster, score_to_modifier};
 use ratatui::{prelude::*, widgets::*};
 
 /// Formats a modifier-like value in the form `(±X)`.
-fn fmt_mod(paren: bool, modifier: i32) -> String {
-    if paren {
-        format!("({:+})", modifier)
-    } else {
-        format!("{:+}", modifier)
-    }
+fn fmt_mod(modifier: i32) -> String {
+    format!("{:+}", modifier)
 }
 
 /// Creates a [`Paragraph`] widget for displaying the monster's name and type.
@@ -123,7 +119,7 @@ fn basic_stats_table(monster: &Monster) -> Table {
             ]),
             Row::new(vec![
                 Text::styled("Proficiency Bonus", Modifier::BOLD),
-                Text::raw(fmt_mod(false, monster.proficiency_bonus)),
+                Text::raw(fmt_mod(monster.proficiency_bonus)),
             ]),
         ],
         vec![
@@ -133,7 +129,7 @@ fn basic_stats_table(monster: &Monster) -> Table {
     )
 }
 
-/// Creates a [`Table`] widget for displaying a monster's ability scores.
+/// Creates a [`Table`] widget for displaying a monster's ability scores, modifiers, and saves.
 fn ability_scores_table(monster: &Monster) -> Table {
     let (str, dex, con, int, wis, cha) = (
         monster.scores.strength,
@@ -143,40 +139,64 @@ fn ability_scores_table(monster: &Monster) -> Table {
         monster.scores.wisdom,
         monster.scores.charisma,
     );
+    let (str_save, dex_save, con_save, int_save, wis_save, cha_save) = (
+        monster.proficiencies.saving_throws.strength,
+        monster.proficiencies.saving_throws.dexterity,
+        monster.proficiencies.saving_throws.constitution,
+        monster.proficiencies.saving_throws.intelligence,
+        monster.proficiencies.saving_throws.wisdom,
+        monster.proficiencies.saving_throws.charisma,
+    );
 
     /// Helper to build a row for the ability scores table.
-    fn row(odd: bool, ability: &str, score: i32) -> Row {
+    fn row(odd: bool, ability: &str, score: i32, save: Option<i32>) -> Row {
         // more green for high scores, more red for low scores
         // 0: (255, 0, 0)
         // 10: (255, 255, 255)
         // 20: (0, 255, 0)
-        let color = Color::Rgb(
-            (510.0 - 255.0 / 10.0 * score as f32).min(255.0) as u8,
-            (255.0 / 10.0 * score as f32).min(255.0) as u8,
-            (255.0 - (255.0 / 10.0 * score as f32 - 255.0).abs()).max(0.0) as u8,
-        );
+        fn score_to_color(score: i32) -> Color {
+            Color::Rgb(
+                (510.0 - 255.0 / 10.0 * score as f32).min(255.0) as u8,
+                (255.0 / 10.0 * score as f32).min(255.0) as u8,
+                (255.0 - (255.0 / 10.0 * score as f32 - 255.0).abs()).max(0.0) as u8,
+            )
+        }
+
+        let modifier = score_to_modifier(score);
+        let main_color = score_to_color(score);
+
+        // compute color for save modifier by mocking an increased ability score
+        let save_color = score_to_color(score + 2 * (save.unwrap_or(modifier) - modifier));
 
         Row::new(vec![
             Text::styled(ability, Modifier::BOLD),
-            Text::styled(score.to_string(), color),
-            Text::styled(fmt_mod(true, AbilityScores::modifier(score)), color),
+            Text::styled(score.to_string(), main_color),
+            Text::styled(fmt_mod(modifier), main_color),
+            Text::styled(fmt_mod(save.unwrap_or(modifier)), save_color),
         ])
             .style(Style::default().bg(if odd { Color::DarkGray } else { Color::Black }))
     }
 
     Table::new(
         vec![
-            row(false, "STR", str),
-            row(true, "DEX", dex),
-            row(false, "CON", con),
-            row(true, "INT", int),
-            row(false, "WIS", wis),
-            row(true, "CHA", cha),
+            Row::new(vec![
+                Text::styled("Ability", Modifier::BOLD),
+                Text::styled("Score", Modifier::BOLD),
+                Text::styled("Mod", Modifier::BOLD),
+                Text::styled("Save", Modifier::BOLD),
+            ]),
+            row(false, "STR", str, str_save),
+            row(true, "DEX", dex, dex_save),
+            row(false, "CON", con, con_save),
+            row(true, "INT", int, int_save),
+            row(false, "WIS", wis, wis_save),
+            row(true, "CHA", cha, cha_save),
         ],
         vec![
             Constraint::Percentage(50), // ability abbreviation
-            Constraint::Length(3),         // ability score
-            Constraint::Min(4),         // modifier
+            Constraint::Length(5),      // ability score
+            Constraint::Length(4),      // modifier
+            Constraint::Length(4),      // saving throw modifier
         ],
     )
 }
@@ -228,15 +248,15 @@ impl<'a> Widget for MonsterCard<'a> {
             Block::bordered()
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::White))
-                .title("Monster"),
+                .title("Monster Stat Block"),
             area,
             buf,
         );
 
         let layout = Layout::vertical([
-            Constraint::Length(2), // name and type
-            Constraint::Length(4), // basic stats
-            Constraint::Length(6), // ability scores
+            Constraint::Min(2), // name and type
+            Constraint::Min(4), // basic stats
+            Constraint::Min(6), // ability scores
             Constraint::Min(1), // special abilities
         ])
             .horizontal_margin(2)
