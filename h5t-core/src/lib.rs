@@ -60,6 +60,13 @@ impl Combatant {
             CombatantKind::Monster(monster) => monster.hit_points,
         }
     }
+
+    /// Damage the combatant by the given amount.
+    ///
+    /// The amount will not saturate to 0, meaning the combatant can have negative hit points.
+    pub fn damage(&mut self, amount: i32) {
+        self.hit_points -= amount;
+    }
 }
 
 /// A kind of combatant.

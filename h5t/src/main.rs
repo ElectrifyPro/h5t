@@ -27,7 +27,13 @@ fn main() {
                 KeyCode::Char('d') => {
                     // TEST: choose and damage a combatant
                     let selected = tracker.enter_label_mode();
-                    panic!("{:#?}", selected);
+                    let value = tracker.get_value::<i32>("Damage amount").unwrap();
+                    for combatant_idx in selected {
+                        let combatant = &mut tracker.tracker.combatants[combatant_idx];
+                        combatant.damage(value);
+                    }
+                    tracker.label_state = None;
+                    continue;
                 },
                 KeyCode::Char('a') => {
                     tracker.use_action();
