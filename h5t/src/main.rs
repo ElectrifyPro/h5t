@@ -3,6 +3,7 @@ mod tracker;
 
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Monster, Tracker};
+use ratatui::prelude::*;
 
 fn main() {
     // NOTE: monster JSON data provided courtesy of https://www.dnd5eapi.co/
@@ -19,14 +20,18 @@ fn main() {
 
     for _ in 0..tracker.combatants.len() {
         terminal.draw(|frame| {
-            let area = frame.area();
-            // print a nice card
-            // let combatant = tracker.current_combatant();
-            // let CombatantKind::Monster(monster) = &combatant.kind;
-            // frame.render_widget(monster::MonsterCard::new(monster), area);
+            let layout = Layout::horizontal([
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ]).split(frame.area());
 
             // print tracker
-            frame.render_widget(tracker::TrackerWidget::new(&tracker), area);
+            frame.render_widget(tracker::TrackerWidget::new(&tracker), layout[0]);
+
+            // print a nice card
+            let combatant = tracker.current_combatant();
+            let CombatantKind::Monster(monster) = &combatant.kind;
+            frame.render_widget(monster::MonsterCard::new(monster), layout[1]);
         }).unwrap();
         if let Ok(Event::Key(key)) = read() {
             match key.code {

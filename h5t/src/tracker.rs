@@ -1,7 +1,5 @@
-use h5t_core::{Action, Combatant, CombatantKind, Tracker};
+use h5t_core::{Action, Combatant, Tracker};
 use ratatui::{prelude::*, widgets::*};
-
-use crate::monster::MonsterCard;
 
 /// Creates a [`Line`] widget for displaying a list of actions.
 fn action_line(actions: Action) -> Line<'static> {
@@ -90,22 +88,12 @@ impl<'a> TrackerWidget<'a> {
 
 impl<'a> Widget for TrackerWidget<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let layout = Layout::horizontal([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
-            .split(area);
-        let [tracker, stat_block] = [layout[0], layout[1]];
-
-        // draw bordered boxes for the tracker and the monster card
+        // draw bordered boxe for the tracker
         Block::bordered()
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::White))
             .title("Initiative Tracker")
-            .render(tracker, buf);
-
-        let CombatantKind::Monster(monster) = &self.tracker.current_combatant().kind;
-        MonsterCard::new(monster).render(stat_block, buf);
+            .render(area, buf);
 
         let layout = Layout::vertical([
             Constraint::Length(2), // round and turn
@@ -114,7 +102,7 @@ impl<'a> Widget for TrackerWidget<'a> {
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
             .spacing(1)
-            .split(tracker);
+            .split(area);
         let [round_and_turn, combatants] = [layout[0], layout[1]];
 
         let text = vec![
