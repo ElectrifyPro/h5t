@@ -32,14 +32,10 @@ fn combatant_table(tracker: &Tracker) -> Table {
             Constraint::Length(14), // hp / max hp
         ],
     )
-        .header(
-            Row::new([
-                Text::from("Name").centered(),
-                Text::from("HP / Max HP").centered(),
-            ])
-                .bold()
-                .height(2)
-        )
+        .header(Row::new([
+            Text::from("Name").centered(),
+            Text::from("HP / Max HP").centered(),
+        ]).bold())
 }
 
 /// A widget to render the initiative tracker's state.
@@ -66,17 +62,14 @@ impl<'a> Widget for TrackerWidget<'a> {
         let [tracker, stat_block] = [layout[0], layout[1]];
 
         // draw bordered boxes for the tracker and the monster card
-        Widget::render(
-            Block::bordered()
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::White))
-                .title("Initiative Tracker"),
-            tracker,
-            buf,
-        );
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::White))
+            .title("Initiative Tracker")
+            .render(tracker, buf);
+
         let CombatantKind::Monster(monster) = &self.tracker.current_combatant().kind;
-        let card = MonsterCard::new(monster);
-        Widget::render(card, stat_block, buf);
+        MonsterCard::new(monster).render(stat_block, buf);
 
         let layout = Layout::vertical([
             Constraint::Length(2), // round and turn

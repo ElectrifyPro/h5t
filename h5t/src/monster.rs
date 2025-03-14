@@ -179,12 +179,6 @@ fn ability_scores_table(monster: &Monster) -> Table {
 
     Table::new(
         vec![
-            Row::new(vec![
-                Text::styled("Ability", Modifier::BOLD),
-                Text::styled("Score", Modifier::BOLD),
-                Text::styled("Mod", Modifier::BOLD),
-                Text::styled("Save", Modifier::BOLD),
-            ]),
             row(false, "STR", str, str_save),
             row(true, "DEX", dex, dex_save),
             row(false, "CON", con, con_save),
@@ -199,6 +193,12 @@ fn ability_scores_table(monster: &Monster) -> Table {
             Constraint::Length(4),      // saving throw modifier
         ],
     )
+        .header(Row::new(vec![
+            Text::from("Ability Scores"),
+            Text::from("Score"),
+            Text::from("Mod"),
+            Text::from("Save"),
+        ]).bold())
 }
 
 /// Creates a [`Paragraph`] widget for displaying a monster's special abilities.
@@ -244,14 +244,11 @@ impl<'a> MonsterCard<'a> {
 impl<'a> Widget for MonsterCard<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // draw bordered box
-        Widget::render(
-            Block::bordered()
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::White))
-                .title("Monster Stat Block"),
-            area,
-            buf,
-        );
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::White))
+            .title("Monster Stat Block")
+            .render(area, buf);
 
         let layout = Layout::vertical([
             Constraint::Min(2), // name and type
@@ -270,9 +267,9 @@ impl<'a> Widget for MonsterCard<'a> {
             special_abilities
         ] = [layout[0], layout[1], layout[2], layout[3]];
 
-        Widget::render(name_and_type_paragraph(self.monster), name, buf);
+        name_and_type_paragraph(self.monster).render(name, buf);
         Widget::render(basic_stats_table(self.monster), basic_stats, buf);
         Widget::render(ability_scores_table(self.monster), ability_scores, buf);
-        Widget::render(special_abilities_paragraph(self.monster), special_abilities, buf);
+        special_abilities_paragraph(self.monster).render(special_abilities, buf);
     }
 }
