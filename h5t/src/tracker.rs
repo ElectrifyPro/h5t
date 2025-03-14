@@ -1,3 +1,4 @@
+use crate::ui_tracker::LabelModeState;
 use h5t_core::{Action, Combatant, Tracker};
 use ratatui::{prelude::*, widgets::*};
 
@@ -30,15 +31,19 @@ fn action_line(actions: Action) -> Line<'static> {
 }
 
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
-fn combatant_table(tracker: &Tracker) -> Table {
+fn combatant_table<'a>(widget: &'a TrackerWidget) -> Table<'a> {
     /// Builds a table [`Row`] for a combatant.
-    fn combatant_row(combatant: &Combatant) -> Row {
+    fn combatant_row(label: Option<char>, combatant: &Combatant) -> Row {
+        let label_text = label
+            .map(|l| Text::from(format!("{}", l)).bold())
+            .unwrap_or_default();
         let hp_color = Color::Rgb(
             (255.0 - combatant.hit_points as f32 / combatant.max_hit_points() as f32 * 255.0) as u8,
             (combatant.hit_points as f32 / combatant.max_hit_points() as f32 * 255.0) as u8,
             0,
         );
         Row::new([
+            label_text,
             Text::from(combatant.name()),
             action_line(combatant.actions).into(),
             Line::from(vec![
@@ -49,23 +54,31 @@ fn combatant_table(tracker: &Tracker) -> Table {
     }
 
     Table::new(
-        tracker.combatants.iter()
+        widget.tracker.combatants.iter()
             .enumerate()
             .map(|(i, combatant)| {
-                let row = combatant_row(combatant);
-                if i == tracker.turn {
-                    row.style(Style::default().bg(Color::Rgb(0, 48, 130)))
-                } else {
-                    row
-                }
+                let is_current_turn = i == widget.tracker.turn;
+                let label = widget.label_state.labels.get_by_right(&i).copied();
+                let is_label_selected = widget.label_state.selected.contains(&label.unwrap_or_default());
+
+                let row = combatant_row(label, combatant);
+                let style = match (is_current_turn, is_label_selected) {
+                    (true, true) => Style::default().bold().bg(Color::Gray),
+                    (true, false) => Style::default().bg(Color::Rgb(0, 48, 130)),
+                    (false, true) => Style::default().bold().bg(Color::Rgb(128, 85, 0)),
+                    (false, false) => Color::Reset.into(),
+                };
+                row.style(style)
             }),
         [
-            Constraint::Fill(2), // name
-            Constraint::Fill(1), // actions
-            Constraint::Fill(1), // hp / max hp
+            Constraint::Length(2), // label mode
+            Constraint::Fill(2),   // name
+            Constraint::Fill(1),   // actions
+            Constraint::Fill(1),   // hp / max hp
         ],
     )
         .header(Row::new([
+            Text::raw(""),
             Text::from("Name").centered(),
             Text::from("Actions").centered(),
             Text::from("HP / Max HP").centered(),
@@ -77,13 +90,27 @@ fn combatant_table(tracker: &Tracker) -> Table {
 pub struct TrackerWidget<'a> {
     /// The tracker to display.
     pub tracker: &'a Tracker,
+
+    /// State for label mode.
+    pub label_state: LabelModeState,
 }
 
 impl<'a> TrackerWidget<'a> {
     /// Create a new [`TrackerWidget`] widget.
     pub fn new(tracker: &'a Tracker) -> Self {
-        Self { tracker }
+        Self { tracker, label_state: LabelModeState::default() }
     }
+
+    /// Create a new [`TrackerWidget`] widget with the given labels.
+    pub fn with_labels(tracker: &'a Tracker, label: LabelModeState) -> Self {
+        Self { tracker, label_state: label }
+    }
+}
+
+/// Returns the maximum number of combatants that can be displayed in the tracker widget, given the
+/// size of the widget.
+pub(crate) fn max_combatants(size: Size) -> usize {
+    size.height as usize - 6 // 2 for upper and lower borders, 4 for header, spacing, etc.
 }
 
 impl<'a> Widget for TrackerWidget<'a> {
@@ -116,6 +143,6 @@ impl<'a> Widget for TrackerWidget<'a> {
             .wrap(Wrap { trim: true })
             .render(round_and_turn, buf);
 
-        Widget::render(combatant_table(self.tracker), combatants, buf);
+        Widget::render(combatant_table(&self), combatants, buf);
     }
 }

@@ -1,9 +1,10 @@
 mod monster;
 mod tracker;
+mod ui_tracker;
 
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Monster, Tracker};
-use ratatui::prelude::*;
+use ui_tracker::UiTracker;
 
 fn main() {
     // NOTE: monster JSON data provided courtesy of https://www.dnd5eapi.co/
@@ -11,30 +12,23 @@ fn main() {
     let monsters = serde_json::from_reader::<_, Vec<Monster>>(file).unwrap();
     // println!("{:#?}", monsters);
 
-    let mut tracker = Tracker::new(monsters
-        .into_iter()
-        .map(|m| CombatantKind::Monster(m).into())
-        .collect::<Vec<_>>());
-
-    let mut terminal = ratatui::init();
+    let mut tracker = UiTracker::new(
+        ratatui::init(),
+        Tracker::new(monsters
+            .into_iter()
+            .map(|m| CombatantKind::Monster(m).into())
+            .collect::<Vec<_>>()),
+    );
 
     for _ in 0..tracker.combatants.len() {
-        terminal.draw(|frame| {
-            let layout = Layout::horizontal([
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ]).split(frame.area());
-
-            // print tracker
-            frame.render_widget(tracker::TrackerWidget::new(&tracker), layout[0]);
-
-            // print a nice card
-            let combatant = tracker.current_combatant();
-            let CombatantKind::Monster(monster) = &combatant.kind;
-            frame.render_widget(monster::MonsterCard::new(monster), layout[1]);
-        }).unwrap();
+        tracker.draw().unwrap();
         if let Ok(Event::Key(key)) = read() {
             match key.code {
+                KeyCode::Char('d') => {
+                    // TEST: choose and damage a combatant
+                    let selected = tracker.enter_label_mode();
+                    panic!("{:#?}", selected);
+                },
                 KeyCode::Char('a') => {
                     tracker.use_action();
                     continue;
@@ -53,6 +47,4 @@ fn main() {
         }
         tracker.next_turn();
     }
-
-    ratatui::restore();
 }
