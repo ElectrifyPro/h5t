@@ -8,14 +8,57 @@ pub use monster::Monster;
 ///
 /// Combatants can include player characters, monsters, NPCs, etc.
 #[derive(Debug)]
-pub enum Combatant {
+pub struct Combatant {
+    /// The kind of combatant.
+    pub kind: CombatantKind,
+
+    /// The combatant's current hit points.
+    pub hit_points: i32,
+}
+
+impl From<CombatantKind> for Combatant {
+    fn from(kind: CombatantKind) -> Self {
+        match kind {
+            CombatantKind::Monster(monster) => monster.into(),
+        }
+    }
+}
+
+impl Combatant {
+    /// Returns the combatant's name.
+    pub fn name(&self) -> &str {
+        match &self.kind {
+            CombatantKind::Monster(monster) => &monster.name,
+        }
+    }
+
+    /// Returns the combatant's maximum hit points.
+    pub fn max_hit_points(&self) -> i32 {
+        match &self.kind {
+            CombatantKind::Monster(monster) => monster.hit_points,
+        }
+    }
+}
+
+/// A kind of combatant.
+#[derive(Debug)]
+pub enum CombatantKind {
     /// Pre-made monster.
     Monster(Monster),
 }
 
-impl From<Monster> for Combatant {
+impl From<Monster> for CombatantKind {
     fn from(monster: Monster) -> Self {
         Self::Monster(monster)
+    }
+}
+
+impl From<Monster> for Combatant {
+    fn from(monster: Monster) -> Self {
+        Self {
+            hit_points: monster.hit_points,
+            kind: monster.into(),
+        }
     }
 }
 
@@ -67,21 +110,21 @@ mod tests {
     #[test]
     fn test_tracker_next_turn() {
         let mut tracker = Tracker::new(vec![
-            Combatant::Monster(Monster {
+            Monster {
                 index: "goblin".to_string(),
                 name: "Goblin".to_string(),
                 ..Default::default()
-            }),
-            Combatant::Monster(Monster {
+            }.into(),
+            Monster {
                 index: "ogre".to_string(),
                 name: "Ogre".to_string(),
                 ..Default::default()
-            }),
-            Combatant::Monster(Monster {
+            }.into(),
+            Monster {
                 index: "tarrasque".to_string(),
                 name: "Tarrasque".to_string(),
                 ..Default::default()
-            }),
+            }.into(),
         ]);
 
         assert_eq!(tracker.turn, 0);
