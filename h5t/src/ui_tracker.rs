@@ -31,6 +31,9 @@ pub struct UiTracker<B: Backend> {
     /// The underlying tracker.
     pub tracker: Tracker,
 
+    /// Whether to show the stat block for the current combatant.
+    show_stat_block: bool,
+
     /// State for label mode.
     pub label_state: Option<LabelModeState>,
 }
@@ -47,30 +50,47 @@ impl<B: Backend> UiTracker<B> {
         Self {
             terminal,
             tracker,
+            show_stat_block: false,
             label_state: None,
         }
+    }
+
+    /// Toggles the view of the current combatant's stat block.
+    pub fn toggle_stat_block(&mut self) {
+        self.show_stat_block = !self.show_stat_block;
     }
 
     /// Draw the tracker to the terminal.
     pub fn draw(&mut self) -> std::io::Result<ratatui::CompletedFrame> {
         self.terminal.draw(|frame| {
-            let layout = Layout::horizontal([
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ]).split(frame.area());
+            if self.show_stat_block {
+                // show stat block to the side
+                let layout = Layout::horizontal([
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50),
+                ]).split(frame.area());
 
-            // print tracker
-            let tracker = if let Some(label) = &self.label_state {
-                TrackerWidget::with_labels(&self.tracker, label.clone())
+                // print tracker
+                let tracker = if let Some(label) = &self.label_state {
+                    TrackerWidget::with_labels(&self.tracker, label.clone())
+                } else {
+                    TrackerWidget::new(&self.tracker)
+                };
+                frame.render_widget(tracker, layout[0]);
+
+                // print stat block
+                let combatant = self.tracker.current_combatant();
+                let CombatantKind::Monster(monster) = &combatant.kind;
+                frame.render_widget(MonsterCard::new(monster), layout[1]);
             } else {
-                TrackerWidget::new(&self.tracker)
-            };
-            frame.render_widget(tracker, layout[0]);
-
-            // print a nice card
-            let combatant = self.tracker.current_combatant();
-            let CombatantKind::Monster(monster) = &combatant.kind;
-            frame.render_widget(MonsterCard::new(monster), layout[1]);
+                // show only the tracker
+                let tracker = if let Some(label) = &self.label_state {
+                    TrackerWidget::with_labels(&self.tracker, label.clone())
+                } else {
+                    TrackerWidget::new(&self.tracker)
+                };
+                frame.render_widget(tracker, frame.area());
+            }
         })
     }
 

@@ -47,6 +47,10 @@ fn main() {
                     tracker.use_reaction();
                     continue;
                 },
+                KeyCode::Char('s') => {
+                    tracker.toggle_stat_block();
+                    continue;
+                },
                 KeyCode::Char('q') => break,
                 _ => (),
             }
