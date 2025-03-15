@@ -227,21 +227,21 @@ fn traits_paragraph(monster: &Monster) -> Paragraph {
         .wrap(Wrap { trim: true })
 }
 
-/// A card widget for displaying a monster's statistics.
+/// A widget for displaying a monster's stat block.
 #[derive(Debug)]
-pub struct MonsterCard<'a> {
+pub struct StatBlock<'a> {
     /// The monster to display.
     pub monster: &'a Monster,
 }
 
-impl<'a> MonsterCard<'a> {
-    /// Create a new [`MonsterCard`] widget.
+impl<'a> StatBlock<'a> {
+    /// Create a new [`StatBlock`] widget.
     pub fn new(monster: &'a Monster) -> Self {
         Self { monster }
     }
 }
 
-impl<'a> Widget for MonsterCard<'a> {
+impl<'a> Widget for StatBlock<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // draw bordered box
         Block::bordered()

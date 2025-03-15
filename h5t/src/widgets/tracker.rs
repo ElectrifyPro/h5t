@@ -1,5 +1,5 @@
-use crate::ui_tracker::LabelModeState;
-use h5t_core::{Action, Combatant, Tracker};
+use crate::ui::LabelModeState;
+use h5t_core::{Action, Combatant, Tracker as CoreTracker};
 use ratatui::{prelude::*, widgets::*};
 
 /// Creates a [`Line`] widget for displaying a list of actions.
@@ -31,7 +31,7 @@ fn action_line(actions: Action) -> Line<'static> {
 }
 
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
-fn combatant_table<'a>(widget: &'a TrackerWidget) -> Table<'a> {
+fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
     /// Builds a table [`Row`] for a combatant.
     fn combatant_row(label: Option<char>, combatant: &Combatant) -> Row {
         let label_text = label
@@ -87,22 +87,22 @@ fn combatant_table<'a>(widget: &'a TrackerWidget) -> Table<'a> {
 
 /// A widget to render the initiative tracker's state.
 #[derive(Debug)]
-pub struct TrackerWidget<'a> {
+pub struct Tracker<'a> {
     /// The tracker to display.
-    pub tracker: &'a Tracker,
+    pub tracker: &'a CoreTracker,
 
     /// State for label mode.
     pub label_state: LabelModeState,
 }
 
-impl<'a> TrackerWidget<'a> {
-    /// Create a new [`TrackerWidget`] widget.
-    pub fn new(tracker: &'a Tracker) -> Self {
+impl<'a> Tracker<'a> {
+    /// Create a new [`Tracker`] widget.
+    pub fn new(tracker: &'a CoreTracker) -> Self {
         Self { tracker, label_state: LabelModeState::default() }
     }
 
-    /// Create a new [`TrackerWidget`] widget with the given labels.
-    pub fn with_labels(tracker: &'a Tracker, label: LabelModeState) -> Self {
+    /// Create a new [`Tracker`] widget with the given labels.
+    pub fn with_labels(tracker: &'a CoreTracker, label: LabelModeState) -> Self {
         Self { tracker, label_state: label }
     }
 }
@@ -113,7 +113,7 @@ pub(crate) fn max_combatants(size: Size) -> usize {
     size.height as usize - 6 // 2 for upper and lower borders, 4 for header, spacing, etc.
 }
 
-impl<'a> Widget for TrackerWidget<'a> {
+impl<'a> Widget for Tracker<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // draw bordered box for the tracker
         Block::bordered()

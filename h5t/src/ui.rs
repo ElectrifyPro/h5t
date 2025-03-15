@@ -1,5 +1,5 @@
 use bimap::BiMap;
-use crate::{monster::MonsterCard, tracker::{max_combatants, TrackerWidget}};
+use crate::widgets::{max_combatants, StatBlock, Tracker as TrackerWidget};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Tracker};
 use ratatui::{prelude::*, widgets::*};
@@ -56,7 +56,7 @@ pub struct LabelModeState {
 }
 
 /// A wrapper around a [`Tracker`] that handles UI-dependent logic, such as label mode.
-pub struct UiTracker<B: Backend> {
+pub struct Ui<B: Backend> {
     /// The terminal to draw to.
     pub terminal: Terminal<B>,
 
@@ -73,13 +73,13 @@ pub struct UiTracker<B: Backend> {
     pub label_state: Option<LabelModeState>,
 }
 
-impl<B: Backend> Drop for UiTracker<B> {
+impl<B: Backend> Drop for Ui<B> {
     fn drop(&mut self) {
         ratatui::restore();
     }
 }
 
-impl<B: Backend> UiTracker<B> {
+impl<B: Backend> Ui<B> {
     /// Wrap a [`Tracker`] in a new [`UiTracker`].
     pub fn new(terminal: Terminal<B>, tracker: Tracker) -> Self {
         Self {
@@ -110,7 +110,7 @@ impl<B: Backend> UiTracker<B> {
                 Constraint::Percentage(50),
                 Constraint::Percentage(50),
             ]).split(main_area);
-            let [tracker_area, card_area] = [layout[0], layout[1]];
+            let [tracker_area, stat_block_area] = [layout[0], layout[1]];
 
             let tracker_widget = if let Some(label) = &self.label_state {
                 TrackerWidget::with_labels(&self.tracker, label.clone())
@@ -125,7 +125,7 @@ impl<B: Backend> UiTracker<B> {
                 // show stat block
                 let combatant = self.tracker.current_combatant();
                 let CombatantKind::Monster(monster) = &combatant.kind;
-                frame.render_widget(MonsterCard::new(monster), card_area);
+                frame.render_widget(StatBlock::new(monster), stat_block_area);
             } else {
                 // show only the tracker in the combined main_area
                 frame.render_widget(tracker_widget, main_area);
@@ -241,7 +241,7 @@ impl<B: Backend> UiTracker<B> {
     }
 }
 
-impl<B: Backend> Deref for UiTracker<B> {
+impl<B: Backend> Deref for Ui<B> {
     type Target = Tracker;
 
     fn deref(&self) -> &Self::Target {
@@ -249,13 +249,13 @@ impl<B: Backend> Deref for UiTracker<B> {
     }
 }
 
-impl<B: Backend> DerefMut for UiTracker<B> {
+impl<B: Backend> DerefMut for Ui<B> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.tracker
     }
 }
 
-impl<B: Backend> Widget for UiTracker<B> {
+impl<B: Backend> Widget for Ui<B> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         TrackerWidget::new(&self.tracker).render(area, buf);
     }

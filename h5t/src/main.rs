@@ -1,10 +1,9 @@
-mod monster;
-mod tracker;
-mod ui_tracker;
+mod ui;
+mod widgets;
 
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Monster, Tracker};
-use ui_tracker::UiTracker;
+use ui::Ui;
 
 fn main() {
     // NOTE: monster JSON data provided courtesy of https://www.dnd5eapi.co/
@@ -12,7 +11,7 @@ fn main() {
     let monsters = serde_json::from_reader::<_, Vec<Monster>>(file).unwrap();
     // println!("{:#?}", monsters);
 
-    let mut tracker = UiTracker::new(
+    let mut tracker = Ui::new(
         ratatui::init(),
         Tracker::new(monsters
             .into_iter()
