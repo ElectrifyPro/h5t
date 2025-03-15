@@ -115,7 +115,7 @@ pub(crate) fn max_combatants(size: Size) -> usize {
 
 impl<'a> Widget for TrackerWidget<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        // draw bordered boxe for the tracker
+        // draw bordered box for the tracker
         Block::bordered()
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::White))

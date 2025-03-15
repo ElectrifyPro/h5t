@@ -13,6 +13,38 @@ use std::{collections::HashSet, ops::{Deref, DerefMut}};
 /// keyboard.
 const LABELS: &'static str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
 
+/// State for the input field.
+#[derive(Clone, Debug, Default)]
+pub struct InputState {
+    /// Whether the input field is active.
+    active: bool,
+
+    /// Color of the input field.
+    color: Color,
+
+    /// The prompt to display above the input field.
+    prompt: String,
+
+    /// The value of the input field.
+    value: String,
+}
+
+impl InputState {
+    /// Enable a fresh input field.
+    pub fn enable(&mut self, prompt: &str) {
+        self.active = true;
+        self.color = Color::Reset;
+        self.prompt = prompt.to_string();
+        self.value.clear();
+    }
+
+    /// Disable the input field.
+    pub fn disable(&mut self) {
+        self.active = false;
+        self.color = Color::DarkGray;
+    }
+}
+
 /// State passed to [`TrackerWidget`] to handle label mode.
 #[derive(Clone, Debug, Default)]
 pub struct LabelModeState {
@@ -34,6 +66,9 @@ pub struct UiTracker<B: Backend> {
     /// Whether to show the stat block for the current combatant.
     show_stat_block: bool,
 
+    /// State for the input field.
+    input_state: InputState,
+
     /// State for label mode.
     pub label_state: Option<LabelModeState>,
 }
@@ -51,6 +86,7 @@ impl<B: Backend> UiTracker<B> {
             terminal,
             tracker,
             show_stat_block: false,
+            input_state: InputState::default(),
             label_state: None,
         }
     }
@@ -63,33 +99,62 @@ impl<B: Backend> UiTracker<B> {
     /// Draw the tracker to the terminal.
     pub fn draw(&mut self) -> std::io::Result<ratatui::CompletedFrame> {
         self.terminal.draw(|frame| {
+            let layout = Layout::vertical([
+                Constraint::Fill(1),
+                // reserve the bottom 3 rows for the prompt and input
+                Constraint::Length(3),
+            ]).split(frame.area());
+            let [main_area, input_area] = [layout[0], layout[1]];
+
+            let layout = Layout::horizontal([
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ]).split(main_area);
+            let [tracker_area, card_area] = [layout[0], layout[1]];
+
+            let tracker_widget = if let Some(label) = &self.label_state {
+                TrackerWidget::with_labels(&self.tracker, label.clone())
+            } else {
+                TrackerWidget::new(&self.tracker)
+            };
+
             if self.show_stat_block {
-                // show stat block to the side
-                let layout = Layout::horizontal([
-                    Constraint::Percentage(50),
-                    Constraint::Percentage(50),
-                ]).split(frame.area());
+                // show tracker
+                frame.render_widget(tracker_widget, tracker_area);
 
-                // print tracker
-                let tracker = if let Some(label) = &self.label_state {
-                    TrackerWidget::with_labels(&self.tracker, label.clone())
-                } else {
-                    TrackerWidget::new(&self.tracker)
-                };
-                frame.render_widget(tracker, layout[0]);
-
-                // print stat block
+                // show stat block
                 let combatant = self.tracker.current_combatant();
                 let CombatantKind::Monster(monster) = &combatant.kind;
-                frame.render_widget(MonsterCard::new(monster), layout[1]);
+                frame.render_widget(MonsterCard::new(monster), card_area);
             } else {
-                // show only the tracker
-                let tracker = if let Some(label) = &self.label_state {
-                    TrackerWidget::with_labels(&self.tracker, label.clone())
-                } else {
-                    TrackerWidget::new(&self.tracker)
-                };
-                frame.render_widget(tracker, frame.area());
+                // show only the tracker in the combined main_area
+                frame.render_widget(tracker_widget, main_area);
+            }
+
+            // draw bordered box for the input field
+            let input_color = if self.input_state.active {
+                self.input_state.color
+            } else {
+                Color::DarkGray // inactive color
+            };
+            frame.render_widget(
+                Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(input_color))
+                    .title(&*self.input_state.prompt),
+                input_area,
+            );
+
+            if self.input_state.active {
+                let layout = Layout::default()
+                    .constraints([Constraint::Length(1)])
+                    .horizontal_margin(2)
+                    .vertical_margin(1)
+                    .split(input_area);
+
+                // print input
+                let input = Paragraph::new(&*self.input_state.value);
+                frame.render_widget(input, layout[0]);
             }
         })
     }
@@ -152,71 +217,27 @@ impl<B: Backend> UiTracker<B> {
     /// This function creates a visual prompt for the user to enter a value. The user can type in
     /// the value and press `Enter` to submit it.
     pub fn get_value<T: std::str::FromStr>(&mut self, prompt: &str) -> Result<T, T::Err> {
-        let mut input = String::new();
-        let mut valid = true;
+        self.input_state.enable(prompt);
 
         loop {
-            self.terminal.draw(|frame| {
-                let layout = Layout::vertical([
-                    Constraint::Fill(1),
-                    // reserve the bottom 3 rows for the prompt and input
-                    Constraint::Length(3),
-                ]).split(frame.area());
-                let [main, input_area] = [layout[0], layout[1]];
-
-                let layout = Layout::horizontal([
-                    Constraint::Percentage(50),
-                    Constraint::Percentage(50),
-                ]).split(main);
-                let [tracker_area, card_area] = [layout[0], layout[1]];
-
-                // print tracker
-                let tracker = if let Some(label) = &self.label_state {
-                    TrackerWidget::with_labels(&self.tracker, label.clone())
-                } else {
-                    TrackerWidget::new(&self.tracker)
-                };
-                frame.render_widget(tracker, tracker_area);
-
-                // print a nice card
-                let combatant = self.tracker.current_combatant();
-                let CombatantKind::Monster(monster) = &combatant.kind;
-                frame.render_widget(MonsterCard::new(monster), card_area);
-
-                // draw bordered boxe for the tracker
-                frame.render_widget(
-                    Block::bordered()
-                        .border_type(BorderType::Rounded)
-                        .border_style(Style::default().fg(if valid { Color::Reset } else { Color::Red }))
-                        .title(prompt),
-                    input_area,
-                );
-
-                let layout = Layout::default()
-                    .constraints([Constraint::Length(1)])
-                    .horizontal_margin(2)
-                    .vertical_margin(1)
-                    .split(input_area);
-
-                // print input
-                let input = Paragraph::new(input.as_str());
-                frame.render_widget(input, layout[0]);
-            }).unwrap();
+            self.draw().unwrap();
 
             // wait for user input
             if let Ok(Event::Key(key)) = read() {
                 match key.code {
                     KeyCode::Enter => break,
-                    KeyCode::Char(c) => input.push(c),
-                    KeyCode::Backspace => { input.pop(); },
+                    KeyCode::Char(c) => self.input_state.value.push(c),
+                    KeyCode::Backspace => { self.input_state.value.pop(); },
                     _ => (),
                 }
             }
 
-            valid = input.trim().parse::<T>().is_ok();
+            let valid = self.input_state.value.trim().parse::<T>().is_ok();
+            self.input_state.color = if valid { Color::Reset } else { Color::Red };
         }
 
-        input.trim().parse()
+        self.input_state.disable();
+        self.input_state.value.trim().parse()
     }
 }
 
