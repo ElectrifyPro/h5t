@@ -18,7 +18,7 @@ pub fn score_to_modifier(score: Score) -> Modifier {
 ///
 /// It can represent the ability scores themselves, the ability score modifiers, or any other
 /// numerical values related to abilities, depending on the parameter chosen for the type `T`.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Ability<T> {
     pub strength: T,
     pub dexterity: T,

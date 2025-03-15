@@ -1,5 +1,5 @@
 use bimap::BiMap;
-use crate::widgets::{max_combatants, StatBlock, Tracker as TrackerWidget};
+use crate::widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Tracker};
 use ratatui::{prelude::*, widgets::*};
@@ -110,25 +110,24 @@ impl<B: Backend> Ui<B> {
                 Constraint::Percentage(50),
                 Constraint::Percentage(50),
             ]).split(main_area);
-            let [tracker_area, stat_block_area] = [layout[0], layout[1]];
+            let [tracker_area, info_area] = [layout[0], layout[1]];
 
+            // show tracker
             let tracker_widget = if let Some(label) = &self.label_state {
                 TrackerWidget::with_labels(&self.tracker, label.clone())
             } else {
                 TrackerWidget::new(&self.tracker)
             };
+            frame.render_widget(tracker_widget, tracker_area);
 
+            let combatant = self.tracker.current_combatant();
             if self.show_stat_block {
-                // show tracker
-                frame.render_widget(tracker_widget, tracker_area);
-
-                // show stat block
-                let combatant = self.tracker.current_combatant();
+                // show stat block in place of the combatant card
                 let CombatantKind::Monster(monster) = &combatant.kind;
-                frame.render_widget(StatBlock::new(monster), stat_block_area);
+                frame.render_widget(StatBlock::new(monster), info_area);
             } else {
-                // show only the tracker in the combined main_area
-                frame.render_widget(tracker_widget, main_area);
+                // show combatant card
+                frame.render_widget(CombatantBlock::new(combatant), info_area);
             }
 
             // draw bordered box for the input field

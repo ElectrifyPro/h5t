@@ -306,7 +306,7 @@ pub struct Monster {
     pub xp: i32,
 
     /// The monster's proficiency bonus, used for calculating attack bonuses and saving throw DCs.
-    pub proficiency_bonus: i32,
+    pub proficiency_bonus: Modifier,
 
     /// The monster's traits that provide it with various benefits or drawbacks. This includes
     /// things like Legendary Resistances, Lair Actions, etc.

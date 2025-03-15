@@ -1,8 +1,10 @@
 pub mod ability;
 pub mod monster;
 
+use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
 pub use monster::Monster;
+use monster::Speed;
 
 /// The number of actions, bonus actions, and reactions a combatant has.
 #[derive(Clone, Copy, Debug)]
@@ -54,10 +56,31 @@ impl Combatant {
         }
     }
 
+    /// Returns the combatant's main armor class.
+    pub fn armor_class(&self) -> u32 {
+        match &self.kind {
+            CombatantKind::Monster(monster) => monster.armor_class.value,
+        }
+    }
+
+    /// Returns the combatant's speed.
+    pub fn speed(&self) -> &Speed {
+        match &self.kind {
+            CombatantKind::Monster(monster) => &monster.speed,
+        }
+    }
+
     /// Returns the combatant's maximum hit points.
     pub fn max_hit_points(&self) -> i32 {
         match &self.kind {
             CombatantKind::Monster(monster) => monster.hit_points,
+        }
+    }
+
+    /// Returns the combatant's proficiency bonus.
+    pub fn proficiency_bonus(&self) -> Modifier {
+        match &self.kind {
+            CombatantKind::Monster(monster) => monster.proficiency_bonus,
         }
     }
 

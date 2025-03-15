@@ -1,4 +1,4 @@
-use crate::ui::LabelModeState;
+use crate::{ui::LabelModeState, widgets::HitPoints};
 use h5t_core::{Action, Combatant, Tracker as CoreTracker};
 use ratatui::{prelude::*, widgets::*};
 
@@ -37,19 +37,11 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
         let label_text = label
             .map(|l| Text::from(format!("{}", l)).bold())
             .unwrap_or_default();
-        let hp_color = Color::Rgb(
-            (255.0 - combatant.hit_points as f32 / combatant.max_hit_points() as f32 * 255.0) as u8,
-            (combatant.hit_points as f32 / combatant.max_hit_points() as f32 * 255.0) as u8,
-            0,
-        );
         Row::new([
             label_text,
             Text::from(combatant.name()),
             action_line(combatant.actions).into(),
-            Line::from(vec![
-                Span::styled(format!("{}", combatant.hit_points), hp_color),
-                Span::raw(format!(" / {}", combatant.max_hit_points())),
-            ]).into(),
+            HitPoints::new(combatant).line().into(),
         ])
     }
 
