@@ -1,7 +1,7 @@
 use bimap::BiMap;
 use crate::{monster::MonsterCard, tracker::{max_combatants, TrackerWidget}};
 use crossterm::event::{read, Event, KeyCode};
-use h5t_core::{Combatant, CombatantKind, Tracker};
+use h5t_core::{CombatantKind, Tracker};
 use ratatui::{prelude::*, widgets::*};
 use std::{collections::HashSet, ops::{Deref, DerefMut}};
 

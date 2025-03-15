@@ -188,16 +188,16 @@ where D: Deserializer<'de>
     Ok(proficiencies)
 }
 
-/// A special ability that a monster has.
+/// A trait that a monster has.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct SpecialAbility {
-    /// The name of the special ability.
+pub struct Trait {
+    /// The name of the trait.
     pub name: String,
 
-    /// The description of the special ability.
+    /// The description of the trait.
     pub desc: String,
 
-    /// The usage of the special ability.
+    /// The usage of the trait.
     #[serde(default, deserialize_with = "deserialize_usage")]
     pub usage: Usage,
 }
@@ -234,21 +234,21 @@ where D: Deserializer<'de>
     }
 }
 
-/// Usage constraints for a special ability.
+/// Usage constraints for a trait.
 #[derive(Clone, Debug, Default, Serialize)]
 pub enum Usage {
-    /// The special ability has a limited number of usages per day. Effectively, this is a
-    /// limit to how many times the special ability can be used in this combat encounter.
+    /// The trait has a limited number of usages per day. Effectively, this is a limit to how many
+    /// times the trait can be used in this combat encounter.
     PerDay(usize),
 
-    /// The special ability recharges after a short or long rest.
+    /// The trait recharges after a short or long rest.
     RechargeAfterRest,
 
-    /// The special ability recharges only after a long rest.
+    /// The trait recharges only after a long rest.
     RechargeAfterLongRest,
 
-    /// There is no constraint; the special ability can be used at will, or it is a passive
-    /// ability that is always active.
+    /// There is no constraint; the trait can be used at will, or it is a passive ability that is
+    /// always active.
     #[default]
     #[serde(other)]
     AtWill,
@@ -308,9 +308,10 @@ pub struct Monster {
     /// The monster's proficiency bonus, used for calculating attack bonuses and saving throw DCs.
     pub proficiency_bonus: i32,
 
-    /// The monster's special abilities that aren't necessarily actions, bonus actions, or
-    /// reactions. This includes things like Legendary Resistances, Lair Actions, etc.
-    pub special_abilities: Vec<SpecialAbility>,
+    /// The monster's traits that provide it with various benefits or drawbacks. This includes
+    /// things like Legendary Resistances, Lair Actions, etc.
+    #[serde(rename = "special_abilities")]
+    pub traits: Vec<Trait>,
 }
 
 #[cfg(test)]

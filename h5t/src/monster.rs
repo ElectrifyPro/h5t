@@ -201,12 +201,12 @@ fn ability_scores_table(monster: &Monster) -> Table {
         ]).bold())
 }
 
-/// Creates a [`Paragraph`] widget for displaying a monster's special abilities.
-fn special_abilities_paragraph(monster: &Monster) -> Paragraph {
+/// Creates a [`Paragraph`] widget for displaying a monster's traits.
+fn traits_paragraph(monster: &Monster) -> Paragraph {
     use itertools::Itertools;
 
     let text = monster
-        .special_abilities
+        .traits
         .iter()
         .map(|ability| {
             let constraint = match ability.usage {
@@ -254,7 +254,7 @@ impl<'a> Widget for MonsterCard<'a> {
             Constraint::Min(2), // name and type
             Constraint::Min(4), // basic stats
             Constraint::Min(6), // ability scores
-            Constraint::Min(1), // special abilities
+            Constraint::Min(1), // traits
         ])
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
@@ -264,12 +264,12 @@ impl<'a> Widget for MonsterCard<'a> {
             name,
             basic_stats,
             ability_scores,
-            special_abilities
+            traits
         ] = [layout[0], layout[1], layout[2], layout[3]];
 
         name_and_type_paragraph(self.monster).render(name, buf);
         Widget::render(basic_stats_table(self.monster), basic_stats, buf);
         Widget::render(ability_scores_table(self.monster), ability_scores, buf);
-        special_abilities_paragraph(self.monster).render(special_abilities, buf);
+        traits_paragraph(self.monster).render(traits, buf);
     }
 }
