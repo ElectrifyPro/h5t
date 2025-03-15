@@ -1,8 +1,9 @@
+mod selectable;
 mod ui;
 mod widgets;
 
 use crossterm::event::{read, Event, KeyCode};
-use h5t_core::{CombatantKind, Monster, Tracker};
+use h5t_core::{CombatantKind, Condition, Monster, Tracker};
 use ui::Ui;
 
 fn main() {
@@ -23,6 +24,12 @@ fn main() {
         tracker.draw().unwrap();
         if let Ok(Event::Key(key)) = read() {
             match key.code {
+                KeyCode::Char('c') => {
+                    // apply condition
+                    // let selected = tracker.enter_label_mode();
+                    let conditions = tracker.multi_select_enum::<15, Condition>("Select condition(s)");
+                    panic!("conditions: {:?}", conditions);
+                },
                 KeyCode::Char('d') => {
                     // TEST: choose and damage a combatant
                     let selected = tracker.enter_label_mode();

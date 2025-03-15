@@ -1,9 +1,9 @@
 use bimap::BiMap;
-use crate::widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget};
+use crate::{selectable::Selectable, widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget}};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Tracker};
 use ratatui::{prelude::*, widgets::*};
-use std::{collections::HashSet, ops::{Deref, DerefMut}};
+use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 
 /// Labels used for label mode. The tracker will choose labels from this string in sequential
 /// order.
@@ -237,6 +237,81 @@ impl<B: Backend> Ui<B> {
 
         self.input_state.disable();
         self.input_state.value.trim().parse()
+    }
+
+    /// Create a multi-select prompt for an enum.
+    ///
+    /// This creates a popup with a list of options that the user can select from. The user can
+    /// select multiple options (similar to label mode) and press `Enter` to submit their choices.
+    pub fn multi_select_enum<const N: usize, T>(&mut self, prompt: &str) -> Vec<T>
+    where
+        T: Selectable<N>,
+    {
+        let size = self.terminal.size().unwrap();
+        let num_options_in_view = (size.height as usize).min(N);
+
+        // generate labels for all options in view
+        let label_to_option = LABELS
+            .chars()
+            .zip(T::variants())
+            .take(num_options_in_view)
+            .collect::<HashMap<_, _>>();
+
+        // watch for user-input and select options
+        let mut selected = HashSet::new();
+        loop {
+            // render tracker with labels
+            let widget = Table::new(
+                // repeating code ensures the table goes in variant order instead of arbitrary
+                // order
+                LABELS.chars()
+                    .zip(T::variants())
+                    .take(num_options_in_view)
+                    .map(|(label, option)| {
+                        let is_label_selected = selected.contains(&option);
+                        let style = if is_label_selected {
+                            Style::default().bold().bg(Color::Rgb(128, 85, 0))
+                        } else {
+                            Color::Reset.into()
+                        };
+                        Row::new(vec![
+                            Text::styled(label.to_string(), Modifier::BOLD),
+                            Text::raw(option.to_string()),
+                        ]).style(style)
+                    }),
+                [
+                    Constraint::Length(1),
+                    Constraint::Fill(1),
+                ],
+            )
+                .block(Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(Color::Reset))
+                    .title(prompt));
+            self.terminal.draw(|frame| {
+                frame.render_widget(widget, frame.area());
+            }).unwrap();
+
+            // wait for user input
+            if let Ok(Event::Key(key)) = read() {
+                match key.code {
+                    KeyCode::Enter => break,
+                    KeyCode::Char(label) => {
+                        if let Some(option) = label_to_option.get(&label) {
+                            if selected.contains(option) {
+                                selected.remove(option);
+                            } else {
+                                selected.insert(*option);
+                            }
+                        }
+                    },
+                    _ => (),
+                }
+            }
+        }
+
+        // return selected options
+        selected.into_iter().collect()
     }
 }
 
