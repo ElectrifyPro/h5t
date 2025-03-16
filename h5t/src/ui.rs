@@ -1,7 +1,7 @@
 use bimap::BiMap;
 use crate::{selectable::Selectable, widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget}};
 use crossterm::event::{read, Event, KeyCode};
-use h5t_core::{CombatantKind, Tracker};
+use h5t_core::{CombatantKind, Condition, Tracker};
 use ratatui::{prelude::*, widgets::*};
 use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 
@@ -12,6 +12,26 @@ use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 /// top-left and moving down, then right. This keeps labels physically close to each other on the
 /// keyboard.
 const LABELS: &'static str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
+
+/// The info block to show in the UI.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum InfoBlock {
+    /// Show the combatant's full stat block, mostly useful for monsters.
+    StatBlock,
+
+    /// Show the combatant's current combat state.
+    CombatantCard,
+}
+
+impl InfoBlock {
+    /// Toggle the info block.
+    pub fn toggle(&mut self) {
+        *self = match self {
+            InfoBlock::StatBlock => InfoBlock::CombatantCard,
+            InfoBlock::CombatantCard => InfoBlock::StatBlock,
+        };
+    }
+}
 
 /// State for the input field.
 #[derive(Clone, Debug, Default)]
@@ -63,14 +83,14 @@ pub struct Ui<B: Backend> {
     /// The underlying tracker.
     pub tracker: Tracker,
 
-    /// Whether to show the stat block for the current combatant.
-    show_stat_block: bool,
+    /// Which info block to show.
+    info_block: InfoBlock,
 
     /// State for the input field.
     input_state: InputState,
 
     /// State for label mode.
-    pub label_state: Option<LabelModeState>,
+    label_state: Option<LabelModeState>,
 }
 
 impl<B: Backend> Drop for Ui<B> {
@@ -85,15 +105,59 @@ impl<B: Backend> Ui<B> {
         Self {
             terminal,
             tracker,
-            show_stat_block: false,
+            info_block: InfoBlock::CombatantCard,
             input_state: InputState::default(),
             label_state: None,
         }
     }
 
-    /// Toggles the view of the current combatant's stat block.
-    pub fn toggle_stat_block(&mut self) {
-        self.show_stat_block = !self.show_stat_block;
+    /// Run off the tracker until the user exits.
+    pub fn run(&mut self) {
+        loop {
+            self.draw().unwrap();
+
+            // wait for user input
+            let Ok(Event::Key(key)) = read() else {
+                continue;
+            };
+
+            match key.code {
+                KeyCode::Char('c') => {
+                    // apply condition
+                    // let selected = tracker.enter_label_mode();
+                    let conditions = self.multi_select_enum::<15, Condition>("Select condition(s)");
+                    panic!("conditions: {:?}", conditions);
+                },
+                KeyCode::Char('d') => {
+                    // TEST: choose and damage a combatant
+                    let selected = self.enter_label_mode();
+                    let value = self.get_value::<i32>("Damage amount").unwrap();
+                    for combatant_idx in selected {
+                        let combatant = &mut self.tracker.combatants[combatant_idx];
+                        combatant.damage(value);
+                    }
+                    self.label_state = None;
+                    continue;
+                },
+                KeyCode::Char('a') => {
+                    self.use_action();
+                },
+                KeyCode::Char('b') => {
+                    self.use_bonus_action();
+                },
+                KeyCode::Char('r') => {
+                    self.use_reaction();
+                },
+                KeyCode::Char('s') => {
+                    self.info_block.toggle();
+                },
+                KeyCode::Char('n') => {
+                    self.next_turn();
+                },
+                KeyCode::Char('q') => break,
+                _ => (),
+            }
+        }
     }
 
     /// Draw the tracker to the terminal.
@@ -121,7 +185,7 @@ impl<B: Backend> Ui<B> {
             frame.render_widget(tracker_widget, tracker_area);
 
             let combatant = self.tracker.current_combatant();
-            if self.show_stat_block {
+            if self.info_block == InfoBlock::StatBlock {
                 // show stat block in place of the combatant card
                 let CombatantKind::Monster(monster) = &combatant.kind;
                 frame.render_widget(StatBlock::new(monster), info_area);
