@@ -40,7 +40,13 @@ impl ApplyDamage {
     pub fn handle_key(&mut self, key: KeyEvent) -> AfterKey {
         match key.code {
             KeyCode::Enter => return AfterKey::Exit,
-            KeyCode::Char(c) => self.value.push(c),
+            KeyCode::Char(c) => {
+                if self.value.len() >= 4 {
+                    self.color = Color::Yellow;
+                    return AfterKey::Stay;
+                }
+                self.value.push(c);
+            },
             KeyCode::Backspace => { self.value.pop(); },
             _ => (),
         }
