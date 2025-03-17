@@ -2,13 +2,18 @@ use h5t_core::Condition;
 use std::{fmt::Display, hash::Hash};
 
 /// Marker type for enums that can be used with [`Tracker::multi_select_enum`].
-pub trait Selectable<const N: usize>: Copy + Hash + Eq + Display {
+pub(crate) trait Selectable: Copy + Hash + Eq + Display {
+    /// The number of variants in the enum.
+    const N: usize;
+
     /// Returns the possible variants of the enum.
-    fn variants() -> [Self; N];
+    fn variants() -> impl Iterator<Item = Self>;
 }
 
-impl Selectable<15> for Condition {
-    fn variants() -> [Self; 15] {
+impl Selectable for Condition {
+    const N: usize = 15;
+
+    fn variants() -> impl Iterator<Item = Self> {
         [
             Condition::Blinded,
             Condition::Charmed,
@@ -25,6 +30,6 @@ impl Selectable<15> for Condition {
             Condition::Restrained,
             Condition::Stunned,
             Condition::Unconscious,
-        ]
+        ].into_iter()
     }
 }

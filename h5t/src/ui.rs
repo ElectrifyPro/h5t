@@ -1,8 +1,8 @@
 use bimap::BiMap;
-use crate::{selectable::Selectable, widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget}};
+use crate::{selectable::Selectable, widgets::{max_combatants, popup::{Input, Multiselect}, CombatantBlock, StatBlock, Tracker as TrackerWidget}};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Condition, Tracker};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::prelude::*;
 use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 
 /// Labels used for label mode. The tracker will choose labels from this string in sequential
@@ -11,7 +11,7 @@ use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 /// The sequence of labels is simply the characters on a QUERTY keyboard, starting from the
 /// top-left and moving down, then right. This keeps labels physically close to each other on the
 /// keyboard.
-const LABELS: &'static str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
+pub(crate) const LABELS: &'static str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
 
 /// The info block to show in the UI.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -31,6 +31,33 @@ impl InfoBlock {
             InfoBlock::CombatantCard => InfoBlock::StatBlock,
         };
     }
+}
+
+/// State for applying conditions to combatants.
+#[derive(Clone, Debug, Default)]
+pub struct ConditionState {
+    /// Whether the condition state is active.
+    active: bool,
+
+    /// The conditions to apply to combatants.
+    conditions: HashSet<Condition>,
+
+    /// Duration of the conditions.
+    duration: ConditionDuration,
+}
+
+/// Duration of a condition.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum ConditionDuration {
+    /// The condition lasts until the end of the combatant's next turn.
+    #[default]
+    UntilNextTurn,
+
+    /// The condition lasts for the given number of rounds.
+    ///
+    /// When the combatant's turn ends, the duration is decremented by one. When the duration
+    /// is reduced to zero, the condition ends.
+    Rounds(u32),
 }
 
 /// State for the input field.
@@ -86,6 +113,9 @@ pub struct Ui<B: Backend> {
     /// Which info block to show.
     info_block: InfoBlock,
 
+    /// State for applying conditions to combatants.
+    condition_state: ConditionState,
+
     /// State for the input field.
     input_state: InputState,
 
@@ -106,6 +136,7 @@ impl<B: Backend> Ui<B> {
             terminal,
             tracker,
             info_block: InfoBlock::CombatantCard,
+            condition_state: ConditionState::default(),
             input_state: InputState::default(),
             label_state: None,
         }
@@ -125,7 +156,7 @@ impl<B: Backend> Ui<B> {
                 KeyCode::Char('c') => {
                     // apply condition
                     // let selected = tracker.enter_label_mode();
-                    let conditions = self.multi_select_enum::<15, Condition>("Select condition(s)");
+                    let conditions = self.multi_select_enum("Select condition(s)");
                     panic!("conditions: {:?}", conditions);
                 },
                 KeyCode::Char('d') => {
@@ -163,17 +194,10 @@ impl<B: Backend> Ui<B> {
     /// Draw the tracker to the terminal.
     pub fn draw(&mut self) -> std::io::Result<ratatui::CompletedFrame> {
         self.terminal.draw(|frame| {
-            let layout = Layout::vertical([
-                Constraint::Fill(1),
-                // reserve the bottom 3 rows for the prompt and input
-                Constraint::Length(3),
-            ]).split(frame.area());
-            let [main_area, input_area] = [layout[0], layout[1]];
-
             let layout = Layout::horizontal([
                 Constraint::Percentage(50),
                 Constraint::Percentage(50),
-            ]).split(main_area);
+            ]).split(frame.area());
             let [tracker_area, info_area] = [layout[0], layout[1]];
 
             // show tracker
@@ -194,30 +218,20 @@ impl<B: Backend> Ui<B> {
                 frame.render_widget(CombatantBlock::new(combatant), info_area);
             }
 
-            // draw bordered box for the input field
-            let input_color = if self.input_state.active {
-                self.input_state.color
-            } else {
-                Color::DarkGray // inactive color
-            };
-            frame.render_widget(
-                Block::bordered()
-                    .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(input_color))
-                    .title(&*self.input_state.prompt),
-                input_area,
-            );
+            if self.condition_state.active {
+                frame.render_widget(Multiselect::new(
+                    "Select condition(s)",
+                    &self.condition_state.conditions,
+                ), frame.area());
+            }
 
             if self.input_state.active {
-                let layout = Layout::default()
-                    .constraints([Constraint::Length(1)])
-                    .horizontal_margin(2)
-                    .vertical_margin(1)
-                    .split(input_area);
-
-                // print input
-                let input = Paragraph::new(&*self.input_state.value);
-                frame.render_widget(input, layout[0]);
+                frame.render_widget(Input::new(
+                    self.input_state.color,
+                    &self.input_state.prompt,
+                    &self.input_state.value,
+                    4,
+                ), frame.area());
             }
         })
     }
@@ -307,60 +321,26 @@ impl<B: Backend> Ui<B> {
     ///
     /// This creates a popup with a list of options that the user can select from. The user can
     /// select multiple options (similar to label mode) and press `Enter` to submit their choices.
-    pub fn multi_select_enum<const N: usize, T>(&mut self, prompt: &str) -> Vec<T>
-    where
-        T: Selectable<N>,
-    {
-        let size = self.terminal.size().unwrap();
-        let num_options_in_view = (size.height as usize).min(N);
+    pub fn multi_select_enum(&mut self, prompt: &str) -> Vec<Condition> {
+        self.condition_state.active = true;
+        self.condition_state.conditions.clear();
 
         // generate labels for all options in view
         let label_to_option = LABELS
             .chars()
-            .zip(T::variants())
-            .take(num_options_in_view)
+            .zip(Condition::variants())
             .collect::<HashMap<_, _>>();
 
         // watch for user-input and select options
-        let mut selected = HashSet::new();
         loop {
-            // render tracker with labels
-            let widget = Table::new(
-                // repeating code ensures the table goes in variant order instead of arbitrary
-                // order
-                LABELS.chars()
-                    .zip(T::variants())
-                    .take(num_options_in_view)
-                    .map(|(label, option)| {
-                        let is_label_selected = selected.contains(&option);
-                        let style = if is_label_selected {
-                            Style::default().bold().bg(Color::Rgb(128, 85, 0))
-                        } else {
-                            Color::Reset.into()
-                        };
-                        Row::new(vec![
-                            Text::styled(label.to_string(), Modifier::BOLD),
-                            Text::raw(option.to_string()),
-                        ]).style(style)
-                    }),
-                [
-                    Constraint::Length(1),
-                    Constraint::Fill(1),
-                ],
-            )
-                .block(Block::bordered()
-                    .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(Color::Reset))
-                    .title(prompt));
-            self.terminal.draw(|frame| {
-                frame.render_widget(widget, frame.area());
-            }).unwrap();
+            self.draw().unwrap();
 
             // wait for user input
             if let Ok(Event::Key(key)) = read() {
                 match key.code {
                     KeyCode::Enter => break,
                     KeyCode::Char(label) => {
+                        let selected = &mut self.condition_state.conditions;
                         if let Some(option) = label_to_option.get(&label) {
                             if selected.contains(option) {
                                 selected.remove(option);
@@ -374,8 +354,10 @@ impl<B: Backend> Ui<B> {
             }
         }
 
+        self.condition_state.active = false;
+
         // return selected options
-        selected.into_iter().collect()
+        self.condition_state.conditions.iter().copied().collect()
     }
 }
 

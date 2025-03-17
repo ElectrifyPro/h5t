@@ -1,6 +1,7 @@
 pub mod ability_scores;
 pub mod combatant_block;
 pub mod hit_points;
+pub mod popup;
 pub mod stat_block;
 pub mod tracker;
 
