@@ -9,10 +9,10 @@ use super::AfterKey;
 #[derive(Clone, Debug, Default)]
 pub struct ApplyCondition {
     /// The conditions to apply to combatants.
-    pub conditions: HashSet<Condition>,
+    conditions: HashSet<Condition>,
 
     /// Duration of the conditions.
-    pub duration: ConditionDuration,
+    duration: ConditionDuration,
 }
 
 impl ApplyCondition {
@@ -48,5 +48,10 @@ impl ApplyCondition {
         }
 
         AfterKey::Stay
+    }
+
+    /// Apply the conditions to the tracker.
+    pub fn apply(&self, tracker: &mut h5t_core::Tracker) {
+        todo!()
     }
 }

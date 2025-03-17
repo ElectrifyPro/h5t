@@ -96,20 +96,9 @@ impl<B: Backend> Ui<B> {
             if let Some(state) = self.state.as_mut() {
                 match state.handle_key(key) {
                     AfterKey::Exit => {
-                        let state = self.state.take().unwrap();
-                        // apply the action
-                        match state {
-                            State::ApplyCondition(state) => {
-                                todo!("{:#?}", state);
-                            },
-                            State::ApplyDamage(state) => {
-                                let value = state.value.trim().parse::<i32>().unwrap();
-                                for combatant_idx in state.combatants {
-                                    let combatant = &mut self.tracker.combatants[combatant_idx];
-                                    combatant.damage(value);
-                                }
-                            },
-                        }
+                        // SAFETY: the state is `Some`
+                        let state = unsafe { self.state.take().unwrap_unchecked() };
+                        state.apply(&mut self.tracker);
                     },
                     AfterKey::Stay => (),
                 }

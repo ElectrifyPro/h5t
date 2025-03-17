@@ -7,13 +7,13 @@ use super::AfterKey;
 #[derive(Clone, Debug, Default)]
 pub struct ApplyDamage {
     /// The combatant indices to apply damage to.
-    pub combatants: Vec<usize>,
+    combatants: Vec<usize>,
 
     /// Color of the input field, which changes based on if the input is a valid number.
     color: Color,
 
     /// The value of the input field.
-    pub value: String,
+    value: String,
 }
 
 impl ApplyDamage {
@@ -49,5 +49,14 @@ impl ApplyDamage {
         self.color = if valid { Color::Reset } else { Color::Red };
 
         AfterKey::Stay
+    }
+
+    /// Apply the damage to the tracker.
+    pub fn apply(&self, tracker: &mut h5t_core::Tracker) {
+        let value = self.value.trim().parse::<i32>().unwrap();
+        for combatant_idx in &self.combatants {
+            let combatant = &mut tracker.combatants[*combatant_idx];
+            combatant.damage(value);
+        }
     }
 }
