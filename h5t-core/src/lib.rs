@@ -4,7 +4,7 @@ pub mod monster;
 
 use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
-pub use condition::Condition;
+pub use condition::{Condition, ConditionDuration};
 pub use monster::Monster;
 use monster::Speed;
 

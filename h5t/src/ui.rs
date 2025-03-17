@@ -1,9 +1,12 @@
 use bimap::BiMap;
-use crate::{selectable::Selectable, widgets::{max_combatants, popup::{Input, Multiselect}, CombatantBlock, StatBlock, Tracker as TrackerWidget}};
+use crate::{
+    state::{AfterKey, ApplyCondition, ApplyDamage, State},
+    widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
+};
 use crossterm::event::{read, Event, KeyCode};
-use h5t_core::{CombatantKind, Condition, Tracker};
+use h5t_core::{CombatantKind, Tracker};
 use ratatui::prelude::*;
-use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
+use std::{collections::HashSet, ops::{Deref, DerefMut}};
 
 /// Labels used for label mode. The tracker will choose labels from this string in sequential
 /// order.
@@ -33,65 +36,6 @@ impl InfoBlock {
     }
 }
 
-/// State for applying conditions to combatants.
-#[derive(Clone, Debug, Default)]
-pub struct ConditionState {
-    /// Whether the condition state is active.
-    active: bool,
-
-    /// The conditions to apply to combatants.
-    conditions: HashSet<Condition>,
-
-    /// Duration of the conditions.
-    duration: ConditionDuration,
-}
-
-/// Duration of a condition.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum ConditionDuration {
-    /// The condition lasts until the end of the combatant's next turn.
-    #[default]
-    UntilNextTurn,
-
-    /// The condition lasts for the given number of rounds.
-    ///
-    /// When the combatant's turn ends, the duration is decremented by one. When the duration
-    /// is reduced to zero, the condition ends.
-    Rounds(u32),
-}
-
-/// State for the input field.
-#[derive(Clone, Debug, Default)]
-pub struct InputState {
-    /// Whether the input field is active.
-    active: bool,
-
-    /// Color of the input field.
-    color: Color,
-
-    /// The prompt to display above the input field.
-    prompt: String,
-
-    /// The value of the input field.
-    value: String,
-}
-
-impl InputState {
-    /// Enable a fresh input field.
-    pub fn enable(&mut self, prompt: &str) {
-        self.active = true;
-        self.color = Color::Reset;
-        self.prompt = prompt.to_string();
-        self.value.clear();
-    }
-
-    /// Disable the input field.
-    pub fn disable(&mut self) {
-        self.active = false;
-        self.color = Color::DarkGray;
-    }
-}
-
 /// State passed to [`TrackerWidget`] to handle label mode.
 #[derive(Clone, Debug, Default)]
 pub struct LabelModeState {
@@ -113,11 +57,8 @@ pub struct Ui<B: Backend> {
     /// Which info block to show.
     info_block: InfoBlock,
 
-    /// State for applying conditions to combatants.
-    condition_state: ConditionState,
-
-    /// State for the input field.
-    input_state: InputState,
+    /// The currently active state.
+    state: Option<State>,
 
     /// State for label mode.
     label_state: Option<LabelModeState>,
@@ -136,8 +77,7 @@ impl<B: Backend> Ui<B> {
             terminal,
             tracker,
             info_block: InfoBlock::CombatantCard,
-            condition_state: ConditionState::default(),
-            input_state: InputState::default(),
+            state: None,
             label_state: None,
         }
     }
@@ -152,23 +92,38 @@ impl<B: Backend> Ui<B> {
                 continue;
             };
 
+            // if a state is active, let it handle the input
+            if let Some(state) = self.state.as_mut() {
+                match state.handle_key(key) {
+                    AfterKey::Exit => {
+                        let state = self.state.take().unwrap();
+                        // apply the action
+                        match state {
+                            State::ApplyCondition(state) => {
+                                todo!("{:#?}", state);
+                            },
+                            State::ApplyDamage(state) => {
+                                let value = state.value.trim().parse::<i32>().unwrap();
+                                for combatant_idx in state.combatants {
+                                    let combatant = &mut self.tracker.combatants[combatant_idx];
+                                    combatant.damage(value);
+                                }
+                            },
+                        }
+                    },
+                    AfterKey::Stay => (),
+                }
+                continue;
+            }
+
             match key.code {
                 KeyCode::Char('c') => {
-                    // apply condition
-                    // let selected = tracker.enter_label_mode();
-                    let conditions = self.multi_select_enum("Select condition(s)");
-                    panic!("conditions: {:?}", conditions);
+                    self.state = Some(State::ApplyCondition(ApplyCondition::default()));
                 },
                 KeyCode::Char('d') => {
-                    // TEST: choose and damage a combatant
                     let selected = self.enter_label_mode();
-                    let value = self.get_value::<i32>("Damage amount").unwrap();
-                    for combatant_idx in selected {
-                        let combatant = &mut self.tracker.combatants[combatant_idx];
-                        combatant.damage(value);
-                    }
+                    self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
                     self.label_state = None;
-                    continue;
                 },
                 KeyCode::Char('a') => {
                     self.use_action();
@@ -218,21 +173,10 @@ impl<B: Backend> Ui<B> {
                 frame.render_widget(CombatantBlock::new(combatant), info_area);
             }
 
-            if self.condition_state.active {
-                frame.render_widget(Multiselect::new(
-                    "Select condition(s)",
-                    &self.condition_state.conditions,
-                ), frame.area());
-            }
-
-            if self.input_state.active {
-                frame.render_widget(Input::new(
-                    self.input_state.color,
-                    &self.input_state.prompt,
-                    &self.input_state.value,
-                    4,
-                ), frame.area());
-            }
+            let Some(state) = self.state.as_ref() else {
+                return;
+            };
+            state.draw(frame);
         })
     }
 
@@ -287,77 +231,6 @@ impl<B: Backend> Ui<B> {
             .into_iter()
             .filter_map(|label| label_to_combatant_idx.get_by_left(&label).copied())
             .collect()
-    }
-
-    /// Get a value from the user.
-    ///
-    /// This function creates a visual prompt for the user to enter a value. The user can type in
-    /// the value and press `Enter` to submit it.
-    pub fn get_value<T: std::str::FromStr>(&mut self, prompt: &str) -> Result<T, T::Err> {
-        self.input_state.enable(prompt);
-
-        loop {
-            self.draw().unwrap();
-
-            // wait for user input
-            if let Ok(Event::Key(key)) = read() {
-                match key.code {
-                    KeyCode::Enter => break,
-                    KeyCode::Char(c) => self.input_state.value.push(c),
-                    KeyCode::Backspace => { self.input_state.value.pop(); },
-                    _ => (),
-                }
-            }
-
-            let valid = self.input_state.value.trim().parse::<T>().is_ok();
-            self.input_state.color = if valid { Color::Reset } else { Color::Red };
-        }
-
-        self.input_state.disable();
-        self.input_state.value.trim().parse()
-    }
-
-    /// Create a multi-select prompt for an enum.
-    ///
-    /// This creates a popup with a list of options that the user can select from. The user can
-    /// select multiple options (similar to label mode) and press `Enter` to submit their choices.
-    pub fn multi_select_enum(&mut self, prompt: &str) -> Vec<Condition> {
-        self.condition_state.active = true;
-        self.condition_state.conditions.clear();
-
-        // generate labels for all options in view
-        let label_to_option = LABELS
-            .chars()
-            .zip(Condition::variants())
-            .collect::<HashMap<_, _>>();
-
-        // watch for user-input and select options
-        loop {
-            self.draw().unwrap();
-
-            // wait for user input
-            if let Ok(Event::Key(key)) = read() {
-                match key.code {
-                    KeyCode::Enter => break,
-                    KeyCode::Char(label) => {
-                        let selected = &mut self.condition_state.conditions;
-                        if let Some(option) = label_to_option.get(&label) {
-                            if selected.contains(option) {
-                                selected.remove(option);
-                            } else {
-                                selected.insert(*option);
-                            }
-                        }
-                    },
-                    _ => (),
-                }
-            }
-        }
-
-        self.condition_state.active = false;
-
-        // return selected options
-        self.condition_state.conditions.iter().copied().collect()
     }
 }
 
