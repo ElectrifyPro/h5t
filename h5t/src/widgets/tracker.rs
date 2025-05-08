@@ -2,6 +2,20 @@ use crate::{ui::LabelModeState, widgets::HitPoints};
 use h5t_core::{Action, Combatant, Tracker as CoreTracker};
 use ratatui::{prelude::*, widgets::*};
 
+/// Mix two RGB colors together.
+fn mix_colors(color1: (u8, u8, u8), color2: (u8, u8, u8)) -> (u8, u8, u8) {
+    let f = |n1: u8, n2: u8| {
+        let n1 = (255 - n1) as f32;
+        let n2 = (255 - n2) as f32;
+        (n1.powi(2) + n2.powi(2)).sqrt() / 2.0
+    };
+    (
+        f(color1.0, color2.0) as u8,
+        f(color1.1, color2.1) as u8,
+        f(color1.2, color2.2) as u8,
+    )
+}
+
 /// Creates a [`Line`] widget for displaying a list of actions.
 fn action_line(actions: Action) -> Line<'static> {
     /// Format multiple actions in a compact way (e.g. `Ax4,R`).
@@ -54,12 +68,31 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
                 let is_label_selected = widget.label_state.selected.contains(&label.unwrap_or_default());
 
                 let row = combatant_row(label, combatant);
-                let style = match (is_current_turn, is_label_selected) {
-                    (true, true) => Style::default().bold().bg(Color::Gray),
-                    (true, false) => Style::default().bg(Color::Rgb(0, 48, 130)),
-                    (false, true) => Style::default().bold().bg(Color::Rgb(128, 85, 0)),
-                    (false, false) => Color::Reset.into(),
-                };
+                let mut style = Style::default();
+                if is_label_selected {
+                    style = style.bold();
+                }
+
+                let mut bg_color = None;
+                if combatant.hit_points <= 0 {
+                    bg_color = bg_color
+                        .map(|current| mix_colors((255, 0, 0), current))
+                        .or(Some((100, 0, 0)));
+                }
+                if is_current_turn {
+                    bg_color = bg_color
+                        .map(|current| mix_colors((0, 48, 130), current))
+                        .or(Some((0, 48, 130)));
+                }
+                if is_label_selected {
+                    bg_color = bg_color
+                        .map(|current| mix_colors((128, 85, 0), current))
+                        .or(Some((128, 85, 0)));
+                }
+
+                let bg_color = bg_color.map(|bg| Color::Rgb(bg.0, bg.1, bg.2)).unwrap_or(Color::Reset);
+                style = style.bg(bg_color);
+
                 row.style(style)
             }),
         [
