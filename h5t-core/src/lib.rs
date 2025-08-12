@@ -4,7 +4,7 @@ pub mod monster;
 
 use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
-pub use condition::{Condition, ConditionDuration};
+pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use monster::Monster;
 use monster::Speed;
 
@@ -34,6 +34,9 @@ impl Default for Action {
 pub struct Combatant {
     /// The kind of combatant.
     pub kind: CombatantKind,
+
+    /// The combatant's conditions.
+    pub conditions: Vec<Condition>,
 
     /// The combatant's current hit points.
     pub hit_points: i32,
@@ -111,6 +114,7 @@ impl From<Monster> for Combatant {
     fn from(monster: Monster) -> Self {
         Self {
             hit_points: monster.hit_points,
+            conditions: Vec::new(),
             kind: monster.into(),
             actions: Action::default(),
         }
@@ -145,6 +149,20 @@ impl Tracker {
 
     /// Advance the tracker to the next combatant's turn.
     pub fn next_turn(&mut self) {
+        // advance condition durations
+        self.current_combatant_mut()
+            .conditions
+            .retain_mut(|c| {
+                let new_duration = c.duration.decrement();
+                if let Some(new) = new_duration {
+                    c.duration = new;
+                    true
+                } else {
+                    // condition expired
+                    false
+                }
+            });
+
         self.turn = (self.turn + 1) % self.combatants.len();
         if self.turn == 0 {
             self.round += 1;

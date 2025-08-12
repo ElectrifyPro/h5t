@@ -1,5 +1,7 @@
 use h5t_core::{monster::Speed, Combatant};
 use ratatui::{prelude::*, widgets::*};
+use crate::widgets::conditions::FullConditions;
+
 use super::{AbilityScores, HitPoints};
 
 /// Creates a [`Text`] widget for displaying the combatant's name and whether they are dead.
@@ -98,7 +100,8 @@ impl<'a> Widget for CombatantBlock<'a> {
 
         let layout = Layout::vertical([
             Constraint::Length(1), // name
-            Constraint::Min(4),    // basic stats
+            Constraint::Min(5),    // basic stats
+            Constraint::Fill(1),   // conditions
             Constraint::Min(6),    // ability scores
         ])
             .horizontal_margin(2)
@@ -108,11 +111,13 @@ impl<'a> Widget for CombatantBlock<'a> {
         let [
             name,
             basic_stats,
+            conditions,
             ability_scores,
-        ] = [layout[0], layout[1], layout[2]];
+        ] = [layout[0], layout[1], layout[2], layout[3]];
 
         basic_status_text(self.combatant).render(name, buf);
         Widget::render(basic_stats_table(self.combatant), basic_stats, buf);
+        FullConditions::new(self.combatant).render(conditions, buf);
         AbilityScores::new(self.combatant).render(ability_scores, buf);
     }
 }

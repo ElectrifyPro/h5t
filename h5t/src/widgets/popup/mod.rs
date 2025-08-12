@@ -2,9 +2,11 @@
 
 pub mod input;
 pub mod multiselect;
+pub mod select;
 
 pub use input::Input;
 pub use multiselect::Multiselect;
+pub use select::Select;
 use ratatui::{layout::Flex, prelude::*};
 
 /// Computes the area to render a popup in, given horizontal and vertical alignment requirements

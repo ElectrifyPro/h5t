@@ -1,4 +1,4 @@
-use crate::{ui::LabelModeState, widgets::HitPoints};
+use crate::{ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
 use h5t_core::{Action, Combatant, Tracker as CoreTracker};
 use ratatui::{prelude::*, widgets::*};
 
@@ -56,6 +56,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
             Text::from(combatant.name()),
             action_line(combatant.actions).into(),
             HitPoints::new(combatant).line().into(),
+            CompactConditions::new(combatant).line().into(),
         ])
     }
 
@@ -100,6 +101,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
             Constraint::Fill(2),   // name
             Constraint::Fill(1),   // actions
             Constraint::Fill(1),   // hp / max hp
+            Constraint::Fill(1),   // conditions
         ],
     )
         .header(Row::new([
@@ -107,6 +109,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
             Text::from("Name").centered(),
             Text::from("Actions").centered(),
             Text::from("HP / Max HP").centered(),
+            Text::from("Conditions").centered(),
         ]).bold())
 }
 

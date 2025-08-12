@@ -1,36 +1,33 @@
 use crate::{selectable::Selectable, ui::LABELS};
 use ratatui::{layout::Flex, prelude::*, widgets::*};
-use std::collections::HashSet;
 use super::popup_area;
 
-/// A popup that displays a multi-select prompt for an enum. Like [`Select`], but for multiple
-/// options.
+/// A popup that displays a selection prompt for an enum. Like [`Multiselect`], but for a single
+/// option.
 ///
 /// This widget doesn't actually handle input, it simply acts as a container for the input.
 ///
-/// [`Select`]: super::Select
-pub struct Multiselect<'a, T> {
+/// [`Multiselect`]: super::Multiselect
+pub struct Select<'a, T> {
     /// The prompt to display as the title of the input box.
     prompt: &'a str,
 
-    /// The selected variants.
-    selected: &'a HashSet<T>,
+    /// The selected variant.
+    selected: &'a T,
 
     /// Whether to render the widget in an active state.
     active: bool,
 }
 
-impl<'a, T> Multiselect<'a, T> {
-    /// Create a new [`Multiselect`] popup with all the required fields.
-    pub fn new(prompt: &'a str, selected: &'a HashSet<T>, active: bool) -> Self {
+impl<'a, T> Select<'a, T> {
+    /// Create a new [`Select`] popup with all the required fields.
+    pub fn new(prompt: &'a str, selected: &'a T, active: bool) -> Self {
         Self { prompt, selected, active }
     }
 }
 
-impl<T: Selectable> Widget for Multiselect<'_, T> {
+impl<T: Selectable> Widget for Select<'_, T> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let prompt = format!("{} ({}/{})", self.prompt, self.selected.len(), T::N);
-
         // center widget
         // 4 for borders and text padding, 2 for space for labels
         let content_width = 4 + 2 + T::variants()
@@ -38,7 +35,7 @@ impl<T: Selectable> Widget for Multiselect<'_, T> {
             .max()
             .unwrap_or(0) as u16;
         let size = (
-            content_width.max(prompt.len() as u16 + 2),
+            content_width.max(self.prompt.len() as u16 + 2),
             // 2 for top and bottom border
             2 + T::N as u16,
         );
@@ -51,26 +48,12 @@ impl<T: Selectable> Widget for Multiselect<'_, T> {
             LABELS.chars()
                 .zip(T::variants())
                 .map(|(label, option)| {
-                    let is_label_selected = self.selected.contains(&option);
-                    let mut style = Style::default();
-                    if is_label_selected {
-                        style = style.bold();
-                    }
-
-                    let bg_color = if is_label_selected {
-                        Color::Rgb(128, 85, 0)
-                    } else {
-                        Color::Reset
+                    let style = match (*self.selected == option, self.active) {
+                        (true, true) => Style::default().bold().fg(Color::White).bg(Color::Rgb(128, 85, 0)),
+                        (true, false) => Style::default().bold().fg(Color::Rgb(128, 128, 128)).bg(Color::Rgb(64, 42, 0)),
+                        (false, true) => Color::White.into(),
+                        (false, false) => Color::Rgb(128, 128, 128).into(),
                     };
-
-                    let fg_color = if self.active {
-                        Color::White
-                    } else {
-                        Color::Rgb(128, 128, 128)
-                    };
-
-                    style = style.bg(bg_color).fg(fg_color);
-
                     Row::new(vec![
                         Text::styled(label.to_string(), Modifier::BOLD),
                         Text::raw(option.to_string()),
@@ -84,7 +67,7 @@ impl<T: Selectable> Widget for Multiselect<'_, T> {
             .block(Block::bordered()
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(if self.active { Color::White } else { Color::Rgb(128, 128, 128) }))
-                .title(prompt)
+                .title(self.prompt)
                 .padding(Padding::symmetric(1, 0)));
 
         Widget::render(widget, area, buf);
