@@ -149,11 +149,19 @@ impl Tracker {
         if self.turn == 0 {
             self.round += 1;
         }
+
+        // restore current combatant's actions at the start of their turn
+        self.current_combatant_mut().actions = Action::default();
     }
 
     /// Get the combatant that is currently taking their turn.
     pub fn current_combatant(&self) -> &Combatant {
         &self.combatants[self.turn]
+    }
+
+    /// Get mutable access to the combatant that is currently taking their turn.
+    pub fn current_combatant_mut(&mut self) -> &mut Combatant {
+        &mut self.combatants[self.turn]
     }
 
     /// Use an action for the current combatant. Returns `true` if the action was used, or `false`
