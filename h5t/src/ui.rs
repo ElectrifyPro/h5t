@@ -93,14 +93,16 @@ impl<B: Backend> Ui<B> {
             };
 
             // if a state is active, let it handle the input
-            if let Some(state) = self.state.as_mut() {
+            if let Some(mut state) = self.state.take() {
                 match state.handle_key(key) {
                     AfterKey::Exit => {
-                        // SAFETY: the state is `Some`
-                        let state = unsafe { self.state.take().unwrap_unchecked() };
+                        // apply the state to the tracker
                         state.apply(&mut self.tracker);
                     },
-                    AfterKey::Stay => (),
+                    AfterKey::Stay => {
+                        // put the state back
+                        self.state = Some(state);
+                    },
                 }
                 continue;
             }
