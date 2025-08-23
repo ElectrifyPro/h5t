@@ -1,4 +1,9 @@
-use crate::{selectable::Selectable, ui::LABELS, widgets::popup::{popup_area, Multiselect, Select}};
+use crate::{
+    selectable::Selectable,
+    ui::LABELS,
+    widgets::popup::{popup_area, Multiselect, Select},
+    Tracker,
+};
 use std::{collections::{HashMap, HashSet}, num::NonZeroU32};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::{Condition, ConditionDuration, ConditionKind};
@@ -86,8 +91,8 @@ impl ApplyCondition {
         ), duration);
     }
 
-    /// Handle a key event.
-    pub fn handle_key(&mut self, key: KeyEvent) -> AfterKey {
+    /// Handle a key event and apply any needed changes to the tracker.
+    pub fn handle_key(&mut self, key: KeyEvent, tracker: &mut Tracker) -> AfterKey {
         // generate labels for all conditions
         if self.selected == Field::Conditions {
             let label_to_option = LABELS
@@ -124,7 +129,10 @@ impl ApplyCondition {
                     self.selected = Field::Conditions;
                     return AfterKey::Stay;
                 },
-                KeyCode::Enter => return AfterKey::Exit,
+                KeyCode::Enter => {
+                    self.apply(tracker);
+                    return AfterKey::Exit;
+                },
                 KeyCode::Char(label) => {
                     let selected = &mut self.unit;
                     if let Some(option) = label_to_option.get(&label) {
@@ -139,7 +147,7 @@ impl ApplyCondition {
     }
 
     /// Apply the conditions to the tracker.
-    pub fn apply(&self, tracker: &mut h5t_core::Tracker) {
+    fn apply(&self, tracker: &mut h5t_core::Tracker) {
         for condition in &self.conditions {
             // TODO: get the duration from the input field
             let duration = match self.unit {

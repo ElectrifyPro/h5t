@@ -94,16 +94,9 @@ impl<B: Backend> Ui<B> {
 
             // if a state is active, let it handle the input
             if let Some(mut state) = self.state.take() {
-                match state.handle_key(key) {
-                    AfterKey::Exit => {
-                        // apply the state to the tracker
-                        state.apply(&mut self.tracker);
-                        self.label_state = None;
-                    },
-                    AfterKey::Stay => {
-                        // put the state back
-                        self.state = Some(state);
-                    },
+                match state.handle_key(key, &mut self.tracker) {
+                    AfterKey::Exit => self.label_state = None,
+                    AfterKey::Stay => self.state = Some(state),
                 }
                 continue;
             }

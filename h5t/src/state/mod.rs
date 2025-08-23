@@ -36,19 +36,15 @@ impl State {
         }
     }
 
-    /// Handle a key event.
-    pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> AfterKey {
+    /// Handle a key event and apply any needed changes to the tracker.
+    pub fn handle_key(
+        &mut self,
+        key: crossterm::event::KeyEvent,
+        tracker: &mut Tracker,
+    ) -> AfterKey {
         match self {
-            Self::ApplyCondition(state) => state.handle_key(key),
-            Self::ApplyDamage(state) => state.handle_key(key),
-        }
-    }
-
-    /// Apply the action to the tracker. This function is called when the state is exited.
-    pub fn apply(self, tracker: &mut Tracker) {
-        match self {
-            Self::ApplyCondition(state) => state.apply(tracker),
-            Self::ApplyDamage(state) => state.apply(tracker),
+            Self::ApplyCondition(state) => state.handle_key(key, tracker),
+            Self::ApplyDamage(state) => state.handle_key(key, tracker),
         }
     }
 }
