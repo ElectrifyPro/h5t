@@ -98,6 +98,7 @@ impl<B: Backend> Ui<B> {
                     AfterKey::Exit => {
                         // apply the state to the tracker
                         state.apply(&mut self.tracker);
+                        self.label_state = None;
                     },
                     AfterKey::Stay => {
                         // put the state back
@@ -114,7 +115,6 @@ impl<B: Backend> Ui<B> {
                 KeyCode::Char('d') => {
                     let selected = self.enter_label_mode();
                     self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
-                    self.label_state = None;
                 },
                 KeyCode::Char('a') => {
                     self.use_action();

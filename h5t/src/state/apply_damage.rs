@@ -48,6 +48,10 @@ impl ApplyDamage {
                 self.value.push(c);
             },
             KeyCode::Backspace => { self.value.pop(); },
+            KeyCode::Esc => {
+                self.value = "0".to_string();
+                return AfterKey::Exit;
+            },
             _ => (),
         }
 
