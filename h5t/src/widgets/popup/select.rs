@@ -1,4 +1,5 @@
-use crate::{selectable::Selectable, ui::LABELS};
+use canvas::Canvas;
+use crate::{selectable::Selectable, theme::THEME, ui::LABELS};
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use super::popup_area;
 
@@ -43,17 +44,30 @@ impl<T: Selectable> Widget for Select<'_, T> {
 
         // clear the area
         Clear.render(area, buf);
+        Widget::render(
+            Canvas::default()
+                .background_color(THEME.background.into())
+                .paint(|_| ()),
+            area,
+            buf,
+        );
 
+        let theme = if self.active {
+            THEME
+        } else {
+            THEME.dim()
+        };
         let widget = Table::new(
             LABELS.chars()
                 .zip(T::variants())
                 .map(|(label, option)| {
-                    let style = match (*self.selected == option, self.active) {
-                        (true, true) => Style::default().bold().fg(Color::White).bg(Color::Rgb(128, 85, 0)),
-                        (true, false) => Style::default().bold().fg(Color::Rgb(128, 128, 128)).bg(Color::Rgb(64, 42, 0)),
-                        (false, true) => Color::White.into(),
-                        (false, false) => Color::Rgb(128, 128, 128).into(),
-                    };
+                    let mut style = Style::default()
+                        .fg(theme.foreground.into());
+
+                    if *self.selected == option {
+                        style = style.bold().bg(theme.select.into());
+                    }
+
                     Row::new(vec![
                         Text::styled(label.to_string(), Modifier::BOLD),
                         Text::raw(option.to_string()),
@@ -66,7 +80,7 @@ impl<T: Selectable> Widget for Select<'_, T> {
         )
             .block(Block::bordered()
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(if self.active { Color::White } else { Color::Rgb(128, 128, 128) }))
+                .border_style(theme.foreground)
                 .title(self.prompt)
                 .padding(Padding::symmetric(1, 0)));
 

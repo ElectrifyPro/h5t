@@ -1,11 +1,12 @@
 use bimap::BiMap;
 use crate::{
     state::{AfterKey, ApplyCondition, ApplyDamage, State},
+    theme::THEME,
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::{CombatantKind, Tracker};
-use ratatui::prelude::*;
+use ratatui::{prelude::*, widgets::canvas::Canvas};
 use std::{collections::HashSet, ops::{Deref, DerefMut}};
 
 /// Labels used for label mode. The tracker will choose labels from this string in sequential
@@ -133,6 +134,14 @@ impl<B: Backend> Ui<B> {
     /// Draw the tracker to the terminal.
     pub fn draw(&mut self) -> std::io::Result<ratatui::CompletedFrame> {
         self.terminal.draw(|frame| {
+            // clear the area
+            frame.render_widget(
+                Canvas::default()
+                    .background_color(THEME.background.into())
+                    .paint(|_| ()),
+                frame.area(),
+            );
+
             let layout = Layout::horizontal([
                 Constraint::Percentage(50),
                 Constraint::Percentage(50),

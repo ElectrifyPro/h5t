@@ -1,4 +1,4 @@
-use crate::widgets::popup::Input;
+use crate::{theme::THEME, widgets::popup::Input};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use std::str::FromStr;
@@ -93,12 +93,12 @@ impl<T: FromStr> GetInput<T> {
     /// Get the color of the input field based on the validity of the input.
     pub fn color(&self) -> Color {
         if self.value.len() >= self.max_length {
-            Color::Yellow
+            THEME.warning
         } else if T::from_str(&self.value).is_ok() || !self.touched {
-            Color::Reset
+            THEME.foreground
         } else {
-            Color::Red
-        }
+            THEME.error
+        }.into()
     }
 
     /// Draw the input widget to the given area.

@@ -1,4 +1,5 @@
-use crate::{selectable::Selectable, ui::LABELS};
+use canvas::Canvas;
+use crate::{selectable::Selectable, theme::THEME, ui::LABELS};
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use std::collections::HashSet;
 use super::popup_area;
@@ -46,30 +47,30 @@ impl<T: Selectable> Widget for Multiselect<'_, T> {
 
         // clear the area
         Clear.render(area, buf);
+        Widget::render(
+            Canvas::default()
+                .background_color(THEME.background.into())
+                .paint(|_| ()),
+            area,
+            buf,
+        );
 
+        let theme = if self.active {
+            THEME
+        } else {
+            THEME.dim()
+        };
         let widget = Table::new(
             LABELS.chars()
                 .zip(T::variants())
                 .map(|(label, option)| {
                     let is_label_selected = self.selected.contains(&option);
-                    let mut style = Style::default();
+                    let mut style = Style::default()
+                        .fg(theme.foreground.into());
+
                     if is_label_selected {
-                        style = style.bold();
+                        style = style.bold().bg(theme.select.into());
                     }
-
-                    let bg_color = if is_label_selected {
-                        Color::Rgb(128, 85, 0)
-                    } else {
-                        Color::Reset
-                    };
-
-                    let fg_color = if self.active {
-                        Color::White
-                    } else {
-                        Color::Rgb(128, 128, 128)
-                    };
-
-                    style = style.bg(bg_color).fg(fg_color);
 
                     Row::new(vec![
                         Text::styled(label.to_string(), Modifier::BOLD),
@@ -83,7 +84,7 @@ impl<T: Selectable> Widget for Multiselect<'_, T> {
         )
             .block(Block::bordered()
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(if self.active { Color::White } else { Color::Rgb(128, 128, 128) }))
+                .border_style(theme.foreground)
                 .title(prompt)
                 .padding(Padding::symmetric(1, 0)));
 

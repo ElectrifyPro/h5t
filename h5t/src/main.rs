@@ -1,6 +1,7 @@
 mod input;
 mod selectable;
 mod state;
+mod theme;
 mod ui;
 mod widgets;
 

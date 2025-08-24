@@ -1,3 +1,4 @@
+use crate::theme::THEME;
 use h5t_core::{
     ability::{Modifier as AbilityModifier, Score},
     Ability,
@@ -84,7 +85,7 @@ impl Widget for AbilityScores {
                 Text::styled(format!("{:+}", modifier), main_color),
                 Text::styled(format!("{:+}", save.unwrap_or(modifier)), save_color),
             ])
-                .style(Style::default().bg(if odd { Color::DarkGray } else { Color::Black }))
+                .bg(if odd { THEME.secondary } else { THEME.background })
         }
 
         let widget = Table::new(
@@ -108,7 +109,8 @@ impl Widget for AbilityScores {
                 Text::from("Score"),
                 Text::from("Mod"),
                 Text::from("Save"),
-            ]).bold());
+            ]).bold())
+            .fg(THEME.foreground);
         Widget::render(widget, area, buf);
     }
 }

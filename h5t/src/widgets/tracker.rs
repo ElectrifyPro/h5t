@@ -1,20 +1,6 @@
-use crate::{ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
+use crate::{theme::THEME, ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
 use h5t_core::{Action, Combatant, Tracker as CoreTracker};
 use ratatui::{prelude::*, widgets::*};
-
-/// Mix two RGB colors together.
-fn mix_colors(color1: (u8, u8, u8), color2: (u8, u8, u8)) -> (u8, u8, u8) {
-    let f = |n1: u8, n2: u8| {
-        let n1 = (255 - n1) as f32;
-        let n2 = (255 - n2) as f32;
-        (n1.powi(2) + n2.powi(2)).sqrt() / 2.0
-    };
-    (
-        f(color1.0, color2.0) as u8,
-        f(color1.1, color2.1) as u8,
-        f(color1.2, color2.2) as u8,
-    )
-}
 
 /// Creates a [`Line`] widget for displaying a list of actions.
 fn action_line(actions: Action) -> Line<'static> {
@@ -29,16 +15,16 @@ fn action_line(actions: Action) -> Line<'static> {
 
     let mut spans = Vec::new();
     if actions.actions > 0 {
-        spans.push(Span::styled(fmt_action("A", actions.actions), Color::Green));
-        spans.push(Span::raw(","));
+        spans.push(Span::styled(fmt_action("A", actions.actions), THEME.action));
+        spans.push(Span::styled(",", THEME.foreground));
     }
     if actions.bonus_actions > 0 {
-        spans.push(Span::styled(fmt_action("BA", actions.bonus_actions), Color::Rgb(255, 165, 0)));
-        spans.push(Span::raw(","));
+        spans.push(Span::styled(fmt_action("BA", actions.bonus_actions), THEME.bonus_action));
+        spans.push(Span::styled(",", THEME.foreground));
     }
     if actions.reactions > 0 {
-        spans.push(Span::styled(fmt_action("R", actions.reactions), Color::Magenta));
-        spans.push(Span::raw(","));
+        spans.push(Span::styled(fmt_action("R", actions.reactions), THEME.reaction));
+        spans.push(Span::styled(",", THEME.foreground));
     }
     spans.pop(); // remove the last comma
     Line::from(spans)
@@ -69,7 +55,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
                 let is_label_selected = widget.label_state.selected.contains(&label.unwrap_or_default());
 
                 let row = combatant_row(label, combatant);
-                let mut style = Style::default();
+                let mut style = Style::default().fg(THEME.foreground.into());
                 if is_label_selected {
                     style = style.bold();
                 }
@@ -77,22 +63,22 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
                 let mut bg_color = None;
                 if combatant.hit_points <= 0 {
                     bg_color = bg_color
-                        .map(|current| mix_colors((255, 0, 0), current))
-                        .or(Some((100, 0, 0)));
+                        .map(|current| THEME.dead.mix(current))
+                        .or(Some(THEME.dead));
                 }
                 if is_current_turn {
                     bg_color = bg_color
-                        .map(|current| mix_colors((0, 48, 130), current))
-                        .or(Some((0, 48, 130)));
+                        .map(|current| THEME.primary.mix(current))
+                        .or(Some(THEME.primary));
                 }
                 if is_label_selected {
                     bg_color = bg_color
-                        .map(|current| mix_colors((128, 85, 0), current))
-                        .or(Some((128, 85, 0)));
+                        .map(|current| THEME.select.mix(current))
+                        .or(Some(THEME.select));
                 }
 
-                let bg_color = bg_color.map(|bg| Color::Rgb(bg.0, bg.1, bg.2)).unwrap_or(Color::Reset);
-                style = style.bg(bg_color);
+                let bg_color = bg_color.unwrap_or(THEME.background);
+                style = style.bg(bg_color.into());
 
                 row.style(style)
             }),
@@ -104,13 +90,17 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
             Constraint::Fill(1),   // conditions
         ],
     )
-        .header(Row::new([
-            Text::raw(""),
-            Text::from("Name").centered(),
-            Text::from("Actions").centered(),
-            Text::from("HP / Max HP").centered(),
-            Text::from("Conditions").centered(),
-        ]).bold())
+        .header(
+            Row::new([
+                Text::raw(""),
+                Text::from("Name").centered(),
+                Text::from("Actions").centered(),
+                Text::from("HP / Max HP").centered(),
+                Text::from("Conditions").centered(),
+            ])
+                .style(THEME.foreground)
+                .bold()
+        )
 }
 
 /// A widget to render the initiative tracker's state.
@@ -146,7 +136,7 @@ impl<'a> Widget for Tracker<'a> {
         // draw bordered box for the tracker
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::White))
+            .border_style(THEME.foreground)
             .title("Initiative Tracker")
             .render(area, buf);
 
@@ -168,6 +158,7 @@ impl<'a> Widget for Tracker<'a> {
             ),
         ];
         Paragraph::new(text)
+            .style(THEME.foreground)
             .wrap(Wrap { trim: true })
             .render(round_and_turn, buf);
 

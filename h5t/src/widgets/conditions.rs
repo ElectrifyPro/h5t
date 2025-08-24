@@ -1,3 +1,4 @@
+use crate::theme::THEME;
 use h5t_core::{Combatant, Condition, ConditionKind};
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
@@ -60,6 +61,7 @@ impl<'a> CompactConditions<'a> {
             .intersperse(Span::raw(","))
             .collect::<Vec<_>>();
         Line::from(conditions)
+            .fg(THEME.foreground)
     }
 }
 
@@ -103,6 +105,7 @@ impl<'a> FullConditions<'a> {
 
         Table::new(rows, [Constraint::Length(13), Constraint::Length(11)])
             .header(Row::new([Text::styled("Condition", Modifier::BOLD), Text::styled("Rounds left", Modifier::BOLD)]))
+            .fg(THEME.foreground)
     }
 }
 

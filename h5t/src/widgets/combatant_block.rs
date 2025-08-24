@@ -1,6 +1,6 @@
 use h5t_core::{monster::Speed, Combatant};
 use ratatui::{prelude::*, widgets::*};
-use crate::widgets::conditions::FullConditions;
+use crate::{theme::THEME, widgets::conditions::FullConditions};
 
 use super::{AbilityScores, HitPoints};
 
@@ -10,7 +10,7 @@ fn basic_status_text(combatant: &Combatant) -> Text {
         Text::styled(format!("{} (Dead)", combatant.name()), Modifier::BOLD)
     } else {
         Text::styled(combatant.name(), Modifier::BOLD)
-    }
+    }.fg(THEME.foreground)
 }
 
 /// Creates a [`Table`] widget for displaying a monster's basic statistics.
@@ -71,6 +71,7 @@ fn basic_stats_table(combatant: &Combatant) -> Table {
             Constraint::Percentage(50), // stat value
         ],
     )
+        .fg(THEME.foreground)
 }
 
 /// A widget similar to [`StatBlock`] that displays relevant combat information.
@@ -94,7 +95,7 @@ impl<'a> Widget for CombatantBlock<'a> {
         // draw bordered box
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::White))
+            .border_style(THEME.foreground)
             .title("Combatant Block")
             .render(area, buf);
 

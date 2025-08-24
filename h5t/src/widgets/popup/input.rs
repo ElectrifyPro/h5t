@@ -1,3 +1,5 @@
+use canvas::Canvas;
+use crate::theme::THEME;
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use super::popup_area;
 
@@ -47,11 +49,18 @@ impl Widget for Input<'_> {
 
         // clear the area
         Clear.render(area, buf);
+        Widget::render(
+            Canvas::default()
+                .background_color(THEME.background.into())
+                .paint(|_| ()),
+            area,
+            buf,
+        );
 
         // draw bordered box for the input field
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(self.color))
+            .border_style(self.color)
             .title(self.prompt)
             .render(area, buf);
 
@@ -59,7 +68,7 @@ impl Widget for Input<'_> {
 
         // show input value
         Text::raw(self.value)
-            .style(Style::default().fg(Color::Reset))
+            .style(THEME.foreground)
             .render(text_area, buf);
 
         // display fake cursor
@@ -68,6 +77,6 @@ impl Widget for Input<'_> {
         // buf.set_.set_symbol(cursor_x, cursor_y, "▌");
         buf.cell_mut((cursor_x, cursor_y))
             .expect("cursor out of bounds")
-            .set_bg(Color::White); // TODO: cursor color
+            .set_bg(THEME.foreground.into());
     }
 }

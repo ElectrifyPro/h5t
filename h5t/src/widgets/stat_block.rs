@@ -1,3 +1,4 @@
+use crate::theme::THEME;
 use h5t_core::{monster::{Size, Speed, Type, Usage}, Monster};
 use ratatui::{prelude::*, widgets::*};
 use super::AbilityScores;
@@ -46,6 +47,7 @@ fn name_and_type_paragraph(monster: &Monster) -> Paragraph {
             Span::raw(subtype),
         ]).style(Modifier::ITALIC),
     ])
+        .fg(THEME.foreground)
 }
 
 /// Creates a [`Table`] widget for displaying a monster's basic statistics.
@@ -123,6 +125,7 @@ fn basic_stats_table(monster: &Monster) -> Table {
             Constraint::Percentage(50), // stat value
         ],
     )
+        .fg(THEME.foreground)
 }
 
 /// Creates a [`Paragraph`] widget for displaying a monster's traits.
@@ -148,6 +151,7 @@ fn traits_paragraph(monster: &Monster) -> Paragraph {
         .intersperse(Line::raw(""))
         .collect::<Vec<_>>();
     Paragraph::new(text)
+        .fg(THEME.foreground)
         .wrap(Wrap { trim: true })
 }
 
@@ -170,7 +174,7 @@ impl<'a> Widget for StatBlock<'a> {
         // draw bordered box
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::White))
+            .border_style(THEME.foreground)
             .title("Monster Stat Block")
             .render(area, buf);
 
