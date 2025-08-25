@@ -6,6 +6,22 @@ use super::popup_area;
 /// A popup to get a line of input from the user.
 ///
 /// This widget doesn't actually handle input, it simply acts as a container for the input field.
+///
+/// # Example
+///
+/// ```text
+///       prompt
+///         |
+///   vvvvvvvvvvvvv
+///  ╭Damage amount╮
+///  │ 350█  HP    │
+///  ╰─────────────╯
+///    ^^^^  ^^
+///     | |  |
+/// value |  suffix
+///       |
+///  fake cursor
+/// ```
 pub struct Input<'a> {
     /// The color of the border.
     color: Color,
@@ -15,6 +31,10 @@ pub struct Input<'a> {
 
     /// The text that the user has entered.
     value: &'a str,
+
+    /// The suffix to display after the input value, indicating the expected format / unit of the
+    /// input.
+    suffix: Option<&'a str>,
 
     /// Maximum length of the input field.
     max_length: usize,
@@ -32,20 +52,39 @@ impl<'a> Input<'a> {
             color,
             prompt,
             value,
+            suffix: None,
             max_length,
         }
+    }
+
+    /// Set the suffix to display after the input value, indicating the expected format / unit of
+    /// the input.
+    pub fn try_set_suffix(mut self, suffix: Option<&'a str>) -> Self {
+        self.suffix = suffix;
+        self
     }
 }
 
 impl Widget for Input<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let suffix = self.suffix.unwrap_or("");
+
         // center the input
         let size = (
-            // 4 includes borders and text padding
-            self.prompt.len().max(self.max_length) as u16 + 4,
+            if suffix.is_empty() {
+                self.prompt.len()
+                    .max(self.max_length + 2) as u16 + 2
+            } else {
+                // box expands to fit the prompt, or the max text input length + suffix + 2 (padding
+                // between them) + 2 (margin around them)
+                //
+                // outside +2 includes the horizontal borders
+                self.prompt.len()
+                    .max(suffix.len() + self.max_length + 2 + 2) as u16 + 2
+            },
             3, // 2 for borders, 1 for text
         );
-        let area = popup_area(area, Flex::Center, Flex::End, size, 1);
+        let area = popup_area(area, Flex::Center, Flex::End, size, 0);
 
         // clear the area
         Clear.render(area, buf);
@@ -66,17 +105,30 @@ impl Widget for Input<'_> {
 
         let text_area = area.inner(Margin::new(2, 1));
 
-        // show input value
-        Text::raw(self.value)
+        // show input value underlined
+        Span::raw(format!("{}{}", self.value, " ".repeat(self.max_length.saturating_sub(self.value.len()))))
             .style(THEME.foreground)
+            .patch_style(Modifier::UNDERLINED)
             .render(text_area, buf);
 
         // display fake cursor
         let cursor_x = text_area.x + self.value.len() as u16;
         let cursor_y = text_area.y;
-        // buf.set_.set_symbol(cursor_x, cursor_y, "▌");
+
         buf.cell_mut((cursor_x, cursor_y))
             .expect("cursor out of bounds")
             .set_bg(THEME.foreground.into());
+
+        let [_, suffix_area] = Layout::horizontal([
+            Constraint::Length(self.max_length as u16),
+            Constraint::Length(suffix.len() as u16),
+        ])
+            .spacing(2)
+            .areas(text_area);
+
+        // show suffix
+        Text::raw(suffix)
+            .style(THEME.foreground)
+            .render(suffix_area, buf);
     }
 }

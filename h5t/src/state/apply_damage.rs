@@ -18,7 +18,8 @@ impl ApplyDamage {
     pub fn new(combatants: Vec<usize>) -> Self {
         Self {
             combatants,
-            input: GetInput::new("Damage amount", 4, Charset::Numeric), // damage is usually 1-2 digits
+            input: GetInput::new("Damage amount", 4, Charset::Numeric) // damage is usually 1-2 digits
+                .suffix("HP"),
         }
     }
 

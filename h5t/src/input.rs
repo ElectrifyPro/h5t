@@ -40,6 +40,10 @@ pub struct GetInput<T> {
     /// The value of the input field.
     pub value: String,
 
+    /// The suffix to display after the input value, indicating the expected format / unit of the
+    /// input.
+    suffix: Option<String>,
+
     /// Maximum length of the input field.
     max_length: usize,
 
@@ -62,6 +66,7 @@ impl<T> Clone for GetInput<T> {
         Self {
             prompt: self.prompt.clone(),
             value: self.value.clone(),
+            suffix: self.suffix.clone(),
             max_length: self.max_length,
             charset: self.charset,
             touched: self.touched,
@@ -76,6 +81,7 @@ impl<T> std::fmt::Debug for GetInput<T> {
         f.debug_struct("GetInput")
             .field("prompt", &self.prompt)
             .field("value", &self.value)
+            .field("suffix", &self.suffix)
             .field("max_length", &self.max_length)
             .field("charset", &self.charset)
             .field("touched", &self.touched)
@@ -88,6 +94,7 @@ impl<T> Default for GetInput<T> {
         Self {
             prompt: String::new(),
             value: String::new(),
+            suffix: None,
             max_length: 0,
             charset: Charset::All,
             touched: false,
@@ -102,11 +109,19 @@ impl<T: FromStr> GetInput<T> {
         Self {
             prompt: prompt.into(),
             value: String::new(),
+            suffix: None,
             max_length,
             charset,
             touched: false,
             _marker: std::marker::PhantomData,
         }
+    }
+
+    /// Set the suffix to display after the input value, indicating the expected format / unit of
+    /// the input.
+    pub fn suffix(mut self, suffix: &str) -> Self {
+        self.suffix = Some(suffix.to_string());
+        self
     }
 
     /// Get the color of the input field based on the validity of the input.
@@ -122,12 +137,13 @@ impl<T: FromStr> GetInput<T> {
 
     /// Draw the input widget to the given area.
     pub fn draw(&self, frame: &mut Frame, area: Rect) {
-        frame.render_widget(Input::new(
+        let widget = Input::new(
             self.color(),
             &self.prompt,
             &self.value,
             self.max_length,
-        ), area)
+        ).try_set_suffix(self.suffix.as_deref());
+        frame.render_widget(widget, area)
     }
 
     /// Returns [`AfterKey::Forward`] with the given character if the charset does not allow it.
