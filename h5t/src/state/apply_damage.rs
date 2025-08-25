@@ -1,4 +1,4 @@
-use crate::{input::{AfterKey as AfterKeyInner, GetInput}, Tracker};
+use crate::{input::{AfterKey as AfterKeyInner, Charset, GetInput}, Tracker};
 use crossterm::event::KeyEvent;
 use ratatui::prelude::*;
 use super::AfterKey;
@@ -18,7 +18,7 @@ impl ApplyDamage {
     pub fn new(combatants: Vec<usize>) -> Self {
         Self {
             combatants,
-            input: GetInput::new("Damage amount", 4), // damage is usually 1-2 digits
+            input: GetInput::new("Damage amount", 4, Charset::Numeric), // damage is usually 1-2 digits
         }
     }
 

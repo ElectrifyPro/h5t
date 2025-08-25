@@ -19,6 +19,18 @@ pub enum AfterKey<T> {
     Forward(KeyEvent),
 }
 
+/// The allowed character sets for the input field. The chosen character set only restricts the
+/// characters that can be typed into the input field and does not affect input validation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Charset {
+    /// Allow all characters.
+    #[default]
+    All,
+
+    /// Allow only numeric characters (0-9, +, -).
+    Numeric,
+}
+
 /// Helper type that displays an [`Input`] widget, accepts user input, validates it, and returns
 /// the result.
 pub struct GetInput<T> {
@@ -30,6 +42,9 @@ pub struct GetInput<T> {
 
     /// Maximum length of the input field.
     max_length: usize,
+
+    /// The allowed character set for the input field. This does not affect input validation.
+    charset: Charset,
 
     /// Whether the input has been touched, i.e. the user has ever entered a character in it, even
     /// if they have since deleted it.
@@ -48,6 +63,7 @@ impl<T> Clone for GetInput<T> {
             prompt: self.prompt.clone(),
             value: self.value.clone(),
             max_length: self.max_length,
+            charset: self.charset,
             touched: self.touched,
             _marker: std::marker::PhantomData,
         }
@@ -61,6 +77,7 @@ impl<T> std::fmt::Debug for GetInput<T> {
             .field("prompt", &self.prompt)
             .field("value", &self.value)
             .field("max_length", &self.max_length)
+            .field("charset", &self.charset)
             .field("touched", &self.touched)
             .finish()
     }
@@ -72,6 +89,7 @@ impl<T> Default for GetInput<T> {
             prompt: String::new(),
             value: String::new(),
             max_length: 0,
+            charset: Charset::All,
             touched: false,
             _marker: std::marker::PhantomData,
         }
@@ -80,11 +98,12 @@ impl<T> Default for GetInput<T> {
 
 impl<T: FromStr> GetInput<T> {
     /// Create a new [`GetInput`] helper with all the required fields.
-    pub fn new(prompt: impl Into<String>, max_length: usize) -> Self {
+    pub fn new(prompt: impl Into<String>, max_length: usize, charset: Charset) -> Self {
         Self {
             prompt: prompt.into(),
             value: String::new(),
             max_length,
+            charset,
             touched: false,
             _marker: std::marker::PhantomData,
         }
@@ -111,8 +130,28 @@ impl<T: FromStr> GetInput<T> {
         ), area)
     }
 
+    /// Returns [`AfterKey::Forward`] with the given character if the charset does not allow it.
+    fn try_charset(&self, key: KeyEvent) -> Option<AfterKey<T>> {
+        let KeyEvent { code: KeyCode::Char(c), .. } = key else {
+            return None;
+        };
+
+        match self.charset {
+            Charset::All => None,
+            Charset::Numeric => if c.is_ascii_digit() || c == '+' || c == '-' {
+                None
+            } else {
+                Some(AfterKey::Forward(key))
+            },
+        }
+    }
+
     /// Handle a key event and update the input value.
     pub fn handle_key(&mut self, key: KeyEvent) -> AfterKey<T> {
+        if let Some(after_key) = self.try_charset(key) {
+            return after_key;
+        }
+
         match key.code {
             KeyCode::Enter => if let Ok(value) = T::from_str(&self.value) {
                 return AfterKey::Submit(value);
