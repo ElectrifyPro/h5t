@@ -1,4 +1,5 @@
 use crate::{
+    input::{AfterKey as AfterKeyInput, Charset, GetInput},
     selectable::Selectable,
     ui::LABELS,
     widgets::popup::{popup_area, Multiselect, Select},
@@ -53,7 +54,7 @@ impl std::fmt::Display for Unit {
 }
 
 /// State for applying conditions to combatants.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct ApplyCondition {
     /// The conditions to apply to combatants.
     conditions: HashSet<ConditionKind>,
@@ -61,34 +62,67 @@ pub struct ApplyCondition {
     /// Indicates which form field is currently selected.
     selected: Field,
 
-    /// Value of the input field for the duration.
-    value: String,
+    /// Helper to get the condition duration from the user.
+    input: GetInput<u32>,
 
     /// Duration of the conditions.
     unit: Unit,
 }
 
+impl Default for ApplyCondition {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ApplyCondition {
+    /// Create an [`ApplyCondition`] state with the initial state.
+    pub fn new() -> Self {
+        Self {
+            conditions: HashSet::new(),
+            selected: Field::default(),
+            input: GetInput::new("Duration", 4, Charset::Numeric) // number of rounds / minutes is usually 1-2 digits
+                .suffix(Unit::default().to_string()),
+            unit: Unit::default(),
+        }
+    }
+
     /// Draw the state to the given [`Frame`].
     pub fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
-        let area = popup_area(area, Flex::Center, Flex::End, (area.width, area.height / 3), 0);
+        let area = popup_area(area, Flex::Center, Flex::End, (area.width, area.height / 2), 0);
         let [conditions, duration] = Layout::horizontal([
                 Constraint::Percentage(50),
                 Constraint::Percentage(50),
             ])
             .flex(Flex::Center)
             .areas(area);
+        let [duration_unit, duration_amount] = Layout::vertical([
+                Constraint::Length(6),
+                Constraint::Length(3),
+            ])
+            .flex(Flex::Center)
+            .areas(duration);
         frame.render_widget(Multiselect::new(
             "Select condition(s)",
             &self.conditions,
             self.selected == Field::Conditions,
         ), conditions);
-        frame.render_widget(Select::new(
-            "For how long?",
-            &self.unit,
-            self.selected == Field::Duration,
-        ), duration);
+
+        if self.unit == Unit::UntilNextTurn || self.unit == Unit::Forever {
+            frame.render_widget(Select::new(
+                "For how long?",
+                &self.unit,
+                self.selected == Field::Duration,
+            ), duration);
+        } else {
+            frame.render_widget(Select::new(
+                "For how long?",
+                &self.unit,
+                self.selected == Field::Duration,
+            ), duration_unit);
+            self.input.draw(frame, duration_amount);
+        }
     }
 
     /// Handle a key event and apply any needed changes to the tracker.
@@ -104,6 +138,7 @@ impl ApplyCondition {
                 KeyCode::Esc => return AfterKey::Exit,
                 KeyCode::Enter => {
                     self.selected = Field::Duration;
+                    self.input.set_active(true);
                     return AfterKey::Stay;
                 },
                 KeyCode::Char(label) => {
@@ -124,22 +159,28 @@ impl ApplyCondition {
                 .zip(Unit::variants())
                 .collect::<HashMap<_, _>>();
 
-            match key.code {
-                KeyCode::Esc => {
-                    self.selected = Field::Conditions;
-                    return AfterKey::Stay;
-                },
-                KeyCode::Enter => {
-                    self.apply(tracker);
+            match self.input.handle_key(key) {
+                AfterKeyInput::Handled => return AfterKey::Stay,
+                AfterKeyInput::Submit(amount) => {
+                    self.apply(tracker, amount);
                     return AfterKey::Exit;
                 },
-                KeyCode::Char(label) => {
+                AfterKeyInput::Cancel => {
+                    self.selected = Field::Conditions;
+                    self.input.set_active(false);
+                    return AfterKey::Stay;
+                },
+                AfterKeyInput::Forward(key) => {
+                    let KeyCode::Char(label) = key.code else {
+                        return AfterKey::Stay;
+                    };
+
                     let selected = &mut self.unit;
                     if let Some(option) = label_to_option.get(&label) {
                         *selected = *option;
+                        self.input.set_suffix(selected.to_string().to_lowercase());
                     }
                 },
-                _ => (),
             }
         }
 
@@ -147,13 +188,12 @@ impl ApplyCondition {
     }
 
     /// Apply the conditions to the tracker.
-    fn apply(&self, tracker: &mut h5t_core::Tracker) {
+    fn apply(&self, tracker: &mut h5t_core::Tracker, amount: u32) {
         for condition in &self.conditions {
-            // TODO: get the duration from the input field
             let duration = match self.unit {
                 Unit::UntilNextTurn => ConditionDuration::UntilNextTurn,
-                Unit::Round => ConditionDuration::Rounds(NonZeroU32::new(1).unwrap()),
-                Unit::Minute => ConditionDuration::Minutes(NonZeroU32::new(1).unwrap()),
+                Unit::Round => ConditionDuration::Rounds(NonZeroU32::new(amount).unwrap()),
+                Unit::Minute => ConditionDuration::Minutes(NonZeroU32::new(amount).unwrap()),
                 Unit::Forever => ConditionDuration::Forever,
             };
 

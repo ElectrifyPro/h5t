@@ -1,4 +1,4 @@
-use crate::{theme::THEME, widgets::popup::Input};
+use crate::{theme::{Rgb, THEME}, widgets::popup::Input};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::*;
 use std::str::FromStr;
@@ -38,7 +38,7 @@ pub struct GetInput<T> {
     prompt: String,
 
     /// The value of the input field.
-    pub value: String,
+    value: String,
 
     /// The suffix to display after the input value, indicating the expected format / unit of the
     /// input.
@@ -57,6 +57,9 @@ pub struct GetInput<T> {
     /// entered any characters yet.
     touched: bool,
 
+    /// Whether to render the widget in an active state.
+    active: bool,
+
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -70,6 +73,7 @@ impl<T> Clone for GetInput<T> {
             max_length: self.max_length,
             charset: self.charset,
             touched: self.touched,
+            active: self.active,
             _marker: std::marker::PhantomData,
         }
     }
@@ -85,6 +89,7 @@ impl<T> std::fmt::Debug for GetInput<T> {
             .field("max_length", &self.max_length)
             .field("charset", &self.charset)
             .field("touched", &self.touched)
+            .field("active", &self.active)
             .finish()
     }
 }
@@ -98,6 +103,7 @@ impl<T> Default for GetInput<T> {
             max_length: 0,
             charset: Charset::All,
             touched: false,
+            active: false,
             _marker: std::marker::PhantomData,
         }
     }
@@ -113,26 +119,39 @@ impl<T: FromStr> GetInput<T> {
             max_length,
             charset,
             touched: false,
+            active: true,
             _marker: std::marker::PhantomData,
         }
     }
 
     /// Set the suffix to display after the input value, indicating the expected format / unit of
     /// the input.
-    pub fn suffix(mut self, suffix: &str) -> Self {
-        self.suffix = Some(suffix.to_string());
+    pub fn suffix(mut self, suffix: impl Into<String>) -> Self {
+        self.suffix = Some(suffix.into());
+        self
+    }
+
+    /// Given a mutable refernece to the input, set the suffix to display after the input value.
+    pub fn set_suffix(&mut self, suffix: impl Into<String>) -> &mut Self {
+        self.suffix = Some(suffix.into());
+        self
+    }
+
+    /// Given a mutable reference to the input, set the active state of the widget.
+    pub fn set_active(&mut self, active: bool) -> &mut Self {
+        self.active = active;
         self
     }
 
     /// Get the color of the input field based on the validity of the input.
-    pub fn color(&self) -> Color {
+    pub fn color(&self) -> Rgb {
         if self.value.len() >= self.max_length {
             THEME.warning
         } else if T::from_str(&self.value).is_ok() || !self.touched {
             THEME.foreground
         } else {
             THEME.error
-        }.into()
+        }
     }
 
     /// Draw the input widget to the given area.
@@ -142,6 +161,7 @@ impl<T: FromStr> GetInput<T> {
             &self.prompt,
             &self.value,
             self.max_length,
+            self.active,
         ).try_set_suffix(self.suffix.as_deref());
         frame.render_widget(widget, area)
     }

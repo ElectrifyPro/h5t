@@ -1,5 +1,5 @@
 use canvas::Canvas;
-use crate::theme::THEME;
+use crate::theme::{Rgb, THEME};
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use super::popup_area;
 
@@ -24,7 +24,7 @@ use super::popup_area;
 /// ```
 pub struct Input<'a> {
     /// The color of the border.
-    color: Color,
+    color: Rgb,
 
     /// The prompt to display as the title of the input box.
     prompt: &'a str,
@@ -38,15 +38,19 @@ pub struct Input<'a> {
 
     /// Maximum length of the input field.
     max_length: usize,
+
+    /// Whether to render the widget in an active state.
+    active: bool,
 }
 
 impl<'a> Input<'a> {
     /// Create a new [`Input`] popup with all the required fields.
     pub fn new(
-        color: Color,
+        color: Rgb,
         prompt: &'a str,
         value: &'a str,
         max_length: usize,
+        active: bool,
     ) -> Self {
         Self {
             color,
@@ -54,6 +58,7 @@ impl<'a> Input<'a> {
             value,
             suffix: None,
             max_length,
+            active,
         }
     }
 
@@ -96,10 +101,20 @@ impl Widget for Input<'_> {
             buf,
         );
 
+        let theme = if self.active {
+            THEME
+        } else {
+            THEME.dim()
+        };
+
         // draw bordered box for the input field
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(self.color)
+            .border_style(if self.active {
+                self.color
+            } else {
+                self.color.mix(THEME.background)
+            })
             .title(self.prompt)
             .render(area, buf);
 
@@ -107,7 +122,7 @@ impl Widget for Input<'_> {
 
         // show input value underlined
         Span::raw(format!("{}{}", self.value, " ".repeat(self.max_length.saturating_sub(self.value.len()))))
-            .style(THEME.foreground)
+            .style(theme.foreground)
             .patch_style(Modifier::UNDERLINED)
             .render(text_area, buf);
 
@@ -117,7 +132,7 @@ impl Widget for Input<'_> {
 
         buf.cell_mut((cursor_x, cursor_y))
             .expect("cursor out of bounds")
-            .set_bg(THEME.foreground.into());
+            .set_bg(theme.foreground.into());
 
         let [_, suffix_area] = Layout::horizontal([
             Constraint::Length(self.max_length as u16),
@@ -128,7 +143,7 @@ impl Widget for Input<'_> {
 
         // show suffix
         Text::raw(suffix)
-            .style(THEME.foreground)
+            .style(theme.foreground)
             .render(suffix_area, buf);
     }
 }
