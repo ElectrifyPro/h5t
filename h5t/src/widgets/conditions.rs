@@ -48,7 +48,7 @@ impl<'a> CompactConditions<'a> {
                     format!("{}:{}", condition.kind.abbreviation(), rounds_left)
                 } else {
                     // infinite duration
-                    format!("{}", condition.kind.abbreviation())
+                    condition.kind.abbreviation().to_string()
                 },
                 condition_color(condition.kind),
             )

@@ -169,7 +169,7 @@ impl<'a> StatBlock<'a> {
     }
 }
 
-impl<'a> Widget for StatBlock<'a> {
+impl Widget for StatBlock<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // draw bordered box
         Block::bordered()

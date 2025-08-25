@@ -101,20 +101,16 @@ impl Widget for Input<'_> {
             buf,
         );
 
-        let theme = if self.active {
-            THEME
+        let (color, theme) = if self.active {
+            (self.color, THEME)
         } else {
-            THEME.dim()
+            (self.color.mix(THEME.background), THEME.dim())
         };
 
         // draw bordered box for the input field
         Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(if self.active {
-                self.color
-            } else {
-                self.color.mix(THEME.background)
-            })
+            .border_style(color)
             .title(self.prompt)
             .render(area, buf);
 

@@ -15,7 +15,7 @@ use std::{collections::HashSet, ops::{Deref, DerefMut}};
 /// The sequence of labels is simply the characters on a QUERTY keyboard, starting from the
 /// top-left and moving down, then right. This keeps labels physically close to each other on the
 /// keyboard.
-pub(crate) const LABELS: &'static str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
+pub(crate) const LABELS: &str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
 
 /// The info block to show in the UI.
 #[derive(Clone, Copy, Debug, PartialEq)]

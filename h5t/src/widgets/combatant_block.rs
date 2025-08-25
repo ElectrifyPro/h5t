@@ -90,7 +90,7 @@ impl<'a> CombatantBlock<'a> {
     }
 }
 
-impl<'a> Widget for CombatantBlock<'a> {
+impl Widget for CombatantBlock<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // draw bordered box
         Block::bordered()
