@@ -104,10 +104,19 @@ impl<B: Backend> Ui<B> {
 
             match key.code {
                 KeyCode::Char('c') => {
-                    self.state = Some(State::ApplyCondition(ApplyCondition::default()));
+                    let selected = self.enter_label_mode();
+                    if selected.is_empty() {
+                        self.label_state = None;
+                        continue;
+                    }
+                    self.state = Some(State::ApplyCondition(ApplyCondition::new(selected)));
                 },
                 KeyCode::Char('d') => {
                     let selected = self.enter_label_mode();
+                    if selected.is_empty() {
+                        self.label_state = None;
+                        continue;
+                    }
                     self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
                 },
                 KeyCode::Char('a') => {
@@ -204,6 +213,7 @@ impl<B: Backend> Ui<B> {
             // wait for user input
             if let Ok(Event::Key(key)) = read() {
                 match key.code {
+                    KeyCode::Esc => return vec![],
                     KeyCode::Enter => break,
                     KeyCode::Char(label) => {
                         if label_to_combatant_idx.contains_left(&label) {

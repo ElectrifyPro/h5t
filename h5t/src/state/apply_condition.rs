@@ -56,6 +56,9 @@ impl std::fmt::Display for Unit {
 /// State for applying conditions to combatants.
 #[derive(Clone, Debug)]
 pub struct ApplyCondition {
+    /// The combatant indices to apply damage to.
+    combatants: Vec<usize>,
+
     /// The conditions to apply to combatants.
     conditions: HashSet<ConditionKind>,
 
@@ -69,16 +72,11 @@ pub struct ApplyCondition {
     unit: Unit,
 }
 
-impl Default for ApplyCondition {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl ApplyCondition {
     /// Create an [`ApplyCondition`] state with the initial state.
-    pub fn new() -> Self {
+    pub fn new(combatants: Vec<usize>) -> Self {
         Self {
+            combatants,
             conditions: HashSet::new(),
             selected: Field::default(),
             input: GetInput::new("Duration", 4, Charset::Numeric) // number of rounds / minutes is usually 1-2 digits
@@ -159,28 +157,50 @@ impl ApplyCondition {
                 .zip(Unit::variants())
                 .collect::<HashMap<_, _>>();
 
-            match self.input.handle_key(key) {
-                AfterKeyInput::Handled => return AfterKey::Stay,
-                AfterKeyInput::Submit(amount) => {
-                    self.apply(tracker, amount);
-                    return AfterKey::Exit;
-                },
-                AfterKeyInput::Cancel => {
-                    self.selected = Field::Conditions;
-                    self.input.set_active(false);
-                    return AfterKey::Stay;
-                },
-                AfterKeyInput::Forward(key) => {
-                    let KeyCode::Char(label) = key.code else {
+            // TODO: these `matche`s are basically the same, please simplify
+            if self.unit == Unit::UntilNextTurn || self.unit == Unit::Forever {
+                match key.code {
+                    KeyCode::Esc => {
+                        self.selected = Field::Conditions;
                         return AfterKey::Stay;
-                    };
+                    },
+                    KeyCode::Enter => {
+                        self.apply(tracker, 0);
+                        return AfterKey::Exit;
+                    },
+                    KeyCode::Char(label) => {
+                        let selected = &mut self.unit;
+                        if let Some(option) = label_to_option.get(&label) {
+                            *selected = *option;
+                            self.input.set_suffix(selected.to_string().to_lowercase());
+                        }
+                    },
+                    _ => (),
+                }
+            } else {
+                match self.input.handle_key(key) {
+                    AfterKeyInput::Handled => return AfterKey::Stay,
+                    AfterKeyInput::Submit(amount) => {
+                        self.apply(tracker, amount);
+                        return AfterKey::Exit;
+                    },
+                    AfterKeyInput::Cancel => {
+                        self.selected = Field::Conditions;
+                        self.input.set_active(false);
+                        return AfterKey::Stay;
+                    },
+                    AfterKeyInput::Forward(key) => {
+                        let KeyCode::Char(label) = key.code else {
+                            return AfterKey::Stay;
+                        };
 
-                    let selected = &mut self.unit;
-                    if let Some(option) = label_to_option.get(&label) {
-                        *selected = *option;
-                        self.input.set_suffix(selected.to_string().to_lowercase());
-                    }
-                },
+                        let selected = &mut self.unit;
+                        if let Some(option) = label_to_option.get(&label) {
+                            *selected = *option;
+                            self.input.set_suffix(selected.to_string().to_lowercase());
+                        }
+                    },
+                }
             }
         }
 
@@ -197,25 +217,28 @@ impl ApplyCondition {
                 Unit::Forever => ConditionDuration::Forever,
             };
 
-            // if the condition is already present, override its length if the new one is longer
-            // otherwise, add the condition
-            let existing_condition = tracker
-                .current_combatant_mut()
-                .conditions
-                .iter_mut()
-                .find(|c| c.kind == *condition);
+            for combatant_idx in &self.combatants {
+                let combatant = &mut tracker.combatants[*combatant_idx];
 
-            if let Some(existing_condition) = existing_condition {
-                // override its length if the new one is longer
-                if duration > existing_condition.duration {
-                    existing_condition.duration = duration;
+                // if the condition is already present, override its length if the new one is longer
+                // otherwise, add the condition
+                let existing_condition = combatant
+                    .conditions
+                    .iter_mut()
+                    .find(|c| c.kind == *condition);
+
+                if let Some(existing_condition) = existing_condition {
+                    // override its length if the new one is longer
+                    if duration > existing_condition.duration {
+                        existing_condition.duration = duration;
+                    }
+                } else {
+                    // add new condition
+                    combatant.conditions.push(Condition {
+                        kind: *condition,
+                        duration,
+                    });
                 }
-            } else {
-                // add new condition
-                tracker.current_combatant_mut().conditions.push(Condition {
-                    kind: *condition,
-                    duration,
-                });
             }
         }
     }
