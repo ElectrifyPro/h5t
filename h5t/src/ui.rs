@@ -134,6 +134,15 @@ impl<B: Backend> Ui<B> {
                 KeyCode::Char('n') => {
                     self.next_turn();
                 },
+                KeyCode::Char('N') => {
+                    // skip all dead combatants
+                    loop {
+                        self.next_turn();
+                        if self.current_combatant().hit_points > 0 {
+                            break;
+                        }
+                    }
+                },
                 KeyCode::Char('q') => break,
                 _ => (),
             }
