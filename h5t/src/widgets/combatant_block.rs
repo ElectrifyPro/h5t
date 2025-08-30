@@ -99,7 +99,12 @@ impl Widget for CombatantBlock<'_> {
             .title("Combatant Block")
             .render(area, buf);
 
-        let layout = Layout::vertical([
+        let [
+            name,
+            basic_stats,
+            conditions,
+            ability_scores,
+        ] = Layout::vertical([
             Constraint::Length(1), // name
             Constraint::Min(5),    // basic stats
             Constraint::Fill(1),   // conditions
@@ -108,13 +113,7 @@ impl Widget for CombatantBlock<'_> {
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
             .spacing(1)
-            .split(area);
-        let [
-            name,
-            basic_stats,
-            conditions,
-            ability_scores,
-        ] = [layout[0], layout[1], layout[2], layout[3]];
+            .areas(area);
 
         basic_status_text(self.combatant).render(name, buf);
         Widget::render(basic_stats_table(self.combatant), basic_stats, buf);

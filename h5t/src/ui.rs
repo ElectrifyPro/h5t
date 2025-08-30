@@ -160,11 +160,10 @@ impl<B: Backend> Ui<B> {
                 frame.area(),
             );
 
-            let layout = Layout::horizontal([
+            let [tracker_area, info_area] = Layout::horizontal([
                 Constraint::Percentage(50),
                 Constraint::Percentage(50),
-            ]).split(frame.area());
-            let [tracker_area, info_area] = [layout[0], layout[1]];
+            ]).areas(frame.area());
 
             // show tracker
             let tracker_widget = if let Some(label) = &self.label_state {

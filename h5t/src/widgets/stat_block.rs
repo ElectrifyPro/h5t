@@ -178,7 +178,12 @@ impl Widget for StatBlock<'_> {
             .title("Monster Stat Block")
             .render(area, buf);
 
-        let layout = Layout::vertical([
+        let [
+            name,
+            basic_stats,
+            ability_scores,
+            traits
+        ] = Layout::vertical([
             Constraint::Min(2), // name and type
             Constraint::Min(4), // basic stats
             Constraint::Min(6), // ability scores
@@ -187,13 +192,7 @@ impl Widget for StatBlock<'_> {
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
             .spacing(1)
-            .split(area);
-        let [
-            name,
-            basic_stats,
-            ability_scores,
-            traits
-        ] = [layout[0], layout[1], layout[2], layout[3]];
+            .areas(area);
 
         name_and_type_paragraph(self.monster).render(name, buf);
         Widget::render(basic_stats_table(self.monster), basic_stats, buf);

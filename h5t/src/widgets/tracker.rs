@@ -140,15 +140,14 @@ impl Widget for Tracker<'_> {
             .title("Initiative Tracker")
             .render(area, buf);
 
-        let layout = Layout::vertical([
+        let [round_and_turn, combatants] = Layout::vertical([
             Constraint::Length(2), // round and turn
             Constraint::Fill(1),
         ])
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
             .spacing(1)
-            .split(area);
-        let [round_and_turn, combatants] = [layout[0], layout[1]];
+            .areas(area);
 
         let text = vec![
             Line::styled(format!("Round: {}", self.tracker.round + 1), Modifier::BOLD),
