@@ -8,16 +8,18 @@ pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use monster::Monster;
 use monster::Speed;
 
-/// The number of actions, bonus actions, and reactions a combatant has.
+/// The number of resources available to the combatant, including action count, bonus action
+/// count, reaction count, and resources granted by classes (e.g. Superiority dice) and spells
+/// (e.g. Haste action).
 #[derive(Clone, Copy, Debug)]
-pub struct Action {
+pub struct Resources {
     pub actions: u32,
     pub bonus_actions: u32,
     pub reactions: u32,
 }
 
 /// By default, a combatant has one action, one bonus action, and one reaction.
-impl Default for Action {
+impl Default for Resources {
     fn default() -> Self {
         Self {
             actions: 1,
@@ -41,8 +43,10 @@ pub struct Combatant {
     /// The combatant's current hit points.
     pub hit_points: i32,
 
-    /// The actions available to the combatant.
-    pub actions: Action,
+    /// The number of resources available to the combatant, including action count, bonus action
+    /// count, reaction count, and resources granted by classes (e.g. Superiority dice) and spells
+    /// (e.g. Haste action).
+    pub resources: Resources,
 }
 
 impl From<CombatantKind> for Combatant {
@@ -116,7 +120,7 @@ impl From<Monster> for Combatant {
             hit_points: monster.hit_points,
             conditions: Vec::new(),
             kind: monster.into(),
-            actions: Action::default(),
+            resources: Resources::default(),
         }
     }
 }
@@ -169,7 +173,8 @@ impl Tracker {
         }
 
         // restore current combatant's actions at the start of their turn
-        self.current_combatant_mut().actions = Action::default();
+        // TODO: will reset class and spell things when they shouldn't be reset
+        self.current_combatant_mut().resources = Resources::default();
     }
 
     /// Get the combatant that is currently taking their turn.
@@ -188,7 +193,7 @@ impl Tracker {
     /// This function only decrements the number of actions available to the combatant, meaning the
     /// combat log will not display any information about the action taken.
     pub fn use_action(&mut self) -> bool {
-        let count = &mut self.combatants[self.turn].actions.actions;
+        let count = &mut self.combatants[self.turn].resources.actions;
         if *count == 0 {
             return false;
         }
@@ -202,7 +207,7 @@ impl Tracker {
     /// This function only decrements the number of bonus actions available to the combatant,
     /// meaning the combat log will not display any information about the bonus action taken.
     pub fn use_bonus_action(&mut self) -> bool {
-        let count = &mut self.combatants[self.turn].actions.bonus_actions;
+        let count = &mut self.combatants[self.turn].resources.bonus_actions;
         if *count == 0 {
             return false;
         }
@@ -216,7 +221,7 @@ impl Tracker {
     /// This function only decrements the number of reactions available to the combatant, meaning
     /// the combat log will not display any information about the reaction taken.
     pub fn use_reaction(&mut self) -> bool {
-        let count = &mut self.combatants[self.turn].actions.reactions;
+        let count = &mut self.combatants[self.turn].resources.reactions;
         if *count == 0 {
             return false;
         }

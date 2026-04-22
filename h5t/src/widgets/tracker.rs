@@ -1,9 +1,9 @@
 use crate::{theme::THEME, ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
-use h5t_core::{Action, Combatant, Tracker as CoreTracker};
+use h5t_core::{Resources, Combatant, Tracker as CoreTracker};
 use ratatui::{prelude::*, widgets::*};
 
-/// Creates a [`Line`] widget for displaying a list of actions.
-fn action_line(actions: Action) -> Line<'static> {
+/// Creates a [`Line`] widget for displaying the character's action count.
+fn action_line(actions: Resources) -> Line<'static> {
     /// Format multiple actions in a compact way (e.g. `Ax4,R`).
     fn fmt_action(label: &str, count: u32) -> String {
         if count <= 3 {
@@ -40,7 +40,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
         Row::new([
             label_text,
             Text::from(combatant.name()),
-            action_line(combatant.actions).into(),
+            action_line(combatant.resources).into(),
             HitPoints::new(combatant).line().into(),
             CompactConditions::new(combatant).line().into(),
         ])
