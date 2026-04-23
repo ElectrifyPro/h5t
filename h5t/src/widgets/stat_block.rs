@@ -184,10 +184,10 @@ impl Widget for StatBlock<'_> {
             ability_scores,
             traits
         ] = Layout::vertical([
-            Constraint::Min(2), // name and type
-            Constraint::Min(4), // basic stats
-            Constraint::Min(6), // ability scores
-            Constraint::Min(1), // traits
+            Constraint::Length(2), // name and type
+            Constraint::Length(5), // basic stats
+            Constraint::Length(7), // ability scores
+            Constraint::Min(1),    // traits
         ])
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border

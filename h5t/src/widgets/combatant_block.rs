@@ -106,9 +106,9 @@ impl Widget for CombatantBlock<'_> {
             ability_scores,
         ] = Layout::vertical([
             Constraint::Length(1), // name
-            Constraint::Min(5),    // basic stats
+            Constraint::Length(4), // basic stats
             Constraint::Fill(1),   // conditions
-            Constraint::Min(6),    // ability scores
+            Constraint::Length(7), // ability scores
         ])
             .horizontal_margin(2)
             .vertical_margin(1) // avoid the border
