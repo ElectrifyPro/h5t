@@ -19,7 +19,7 @@ fn action_line(actions: Resources) -> Line<'static> {
         spans.push(Span::styled(",", THEME.foreground));
     }
     if actions.bonus_actions > 0 {
-        spans.push(Span::styled(fmt_action("BA", actions.bonus_actions), THEME.bonus_action));
+        spans.push(Span::styled(fmt_action("B", actions.bonus_actions), THEME.bonus_action));
         spans.push(Span::styled(",", THEME.foreground));
     }
     if actions.reactions > 0 {
