@@ -1,4 +1,4 @@
-use crate::{ability::{Modifier, Score, Skill}, Ability};
+use crate::{ability::{Modifier, Score, Skill}, Ability, Action};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// The source of a monster's armor class value.
@@ -312,6 +312,13 @@ pub struct Monster {
     /// things like Legendary Resistances, Lair Actions, etc.
     #[serde(rename = "special_abilities")]
     pub traits: Vec<Trait>,
+}
+
+impl Monster {
+    /// Returns the actions, bonus actions, reactions, and legendary actions the creature can take.
+    pub fn actions(&self) -> Vec<Action> {
+        Action::standard_actions()
+    }
 }
 
 #[cfg(test)]

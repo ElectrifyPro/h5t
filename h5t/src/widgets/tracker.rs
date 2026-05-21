@@ -1,11 +1,15 @@
 use crate::{theme::THEME, ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
-use h5t_core::{Resources, Combatant, Tracker as CoreTracker};
+use h5t_core::{
+    resource::{Action, BonusAction, Reaction, Resource, ResourcePool},
+    Combatant,
+    Tracker as CoreTracker,
+};
 use ratatui::{prelude::*, widgets::*};
 
 /// Creates a [`Line`] widget for displaying the character's action count.
-fn action_line(actions: Resources) -> Line<'static> {
+fn action_line(pool: &ResourcePool) -> Line<'static> {
     /// Format multiple actions in a compact way (e.g. `Ax4,R`).
-    fn fmt_action(label: &str, count: u32) -> String {
+    fn fmt_action(label: &str, count: i32) -> String {
         if count <= 3 {
             label.repeat(count as usize)
         } else {
@@ -14,16 +18,25 @@ fn action_line(actions: Resources) -> Line<'static> {
     }
 
     let mut spans = Vec::new();
-    if actions.actions > 0 {
-        spans.push(Span::styled(fmt_action("A", actions.actions), THEME.action));
+    let (
+        action_count,
+        bonus_action_count,
+        reaction_count,
+    ) = (
+        Action::get(pool),
+        BonusAction::get(pool),
+        Reaction::get(pool),
+    );
+    if action_count > 0 {
+        spans.push(Span::styled(fmt_action("A", action_count), THEME.action));
         spans.push(Span::styled(",", THEME.foreground));
     }
-    if actions.bonus_actions > 0 {
-        spans.push(Span::styled(fmt_action("B", actions.bonus_actions), THEME.bonus_action));
+    if bonus_action_count > 0 {
+        spans.push(Span::styled(fmt_action("B", bonus_action_count), THEME.bonus_action));
         spans.push(Span::styled(",", THEME.foreground));
     }
-    if actions.reactions > 0 {
-        spans.push(Span::styled(fmt_action("R", actions.reactions), THEME.reaction));
+    if reaction_count > 0 {
+        spans.push(Span::styled(fmt_action("R", reaction_count), THEME.reaction));
         spans.push(Span::styled(",", THEME.foreground));
     }
     spans.pop(); // remove the last comma
@@ -40,7 +53,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
         Row::new([
             label_text,
             Text::from(combatant.name()),
-            action_line(combatant.resources).into(),
+            action_line(&combatant.resource_pool).into(),
             HitPoints::new(combatant).line().into(),
             CompactConditions::new(combatant).line().into(),
         ])

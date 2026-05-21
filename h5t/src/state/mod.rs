@@ -1,8 +1,10 @@
 pub mod apply_condition;
 pub mod apply_damage;
+pub mod select_action;
 
 pub use apply_condition::ApplyCondition;
 pub use apply_damage::ApplyDamage;
+pub use select_action::SelectAction;
 use h5t_core::Tracker;
 
 /// What to do after handling a key event.
@@ -25,6 +27,9 @@ pub enum State {
 
     /// Applying damage to one or more combatants.
     ApplyDamage(ApplyDamage),
+
+    /// Choosing an action to spend an action point on.
+    SelectAction(SelectAction),
 }
 
 impl State {
@@ -33,6 +38,7 @@ impl State {
         match self {
             Self::ApplyCondition(state) => state.draw(frame),
             Self::ApplyDamage(state) => state.draw(frame),
+            Self::SelectAction(state) => state.draw(frame),
         }
     }
 
@@ -45,6 +51,7 @@ impl State {
         match self {
             Self::ApplyCondition(state) => state.handle_key(key, tracker),
             Self::ApplyDamage(state) => state.handle_key(key, tracker),
+            Self::SelectAction(state) => state.handle_key(key, tracker),
         }
     }
 }

@@ -1,33 +1,21 @@
 pub mod ability;
+pub mod action;
 pub mod condition;
 pub mod monster;
+pub mod resource;
 
 use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
+pub use action::Action;
 pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use monster::Monster;
 use monster::Speed;
+use resource::{BonusAction, Reaction, Resource, ResourcePool};
+use std::borrow::Cow;
 
-/// The number of resources available to the combatant, including action count, bonus action
-/// count, reaction count, and resources granted by classes (e.g. Superiority dice) and spells
-/// (e.g. Haste action).
-#[derive(Clone, Copy, Debug)]
-pub struct Resources {
-    pub actions: u32,
-    pub bonus_actions: u32,
-    pub reactions: u32,
-}
-
-/// By default, a combatant has one action, one bonus action, and one reaction.
-impl Default for Resources {
-    fn default() -> Self {
-        Self {
-            actions: 1,
-            bonus_actions: 1,
-            reactions: 1,
-        }
-    }
-}
+/// Generic ID, identifying a resource or action.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Id(Cow<'static, str>);
 
 /// A combatant in the initiative tracker.
 ///
@@ -46,7 +34,7 @@ pub struct Combatant {
     /// The number of resources available to the combatant, including action count, bonus action
     /// count, reaction count, and resources granted by classes (e.g. Superiority dice) and spells
     /// (e.g. Haste action).
-    pub resources: Resources,
+    pub resource_pool: ResourcePool,
 }
 
 impl From<CombatantKind> for Combatant {
@@ -93,6 +81,13 @@ impl Combatant {
         }
     }
 
+    /// Returns the actions, bonus actions, reactions, and legendary actions the creature can take.
+    pub fn actions(&self) -> Vec<Action> {
+        match &self.kind {
+            CombatantKind::Monster(monster) => monster.actions(),
+        }
+    }
+
     /// Damage the combatant by the given amount.
     ///
     /// The amount will not saturate to 0, meaning the combatant can have negative hit points.
@@ -120,7 +115,7 @@ impl From<Monster> for Combatant {
             hit_points: monster.hit_points,
             conditions: Vec::new(),
             kind: monster.into(),
-            resources: Resources::default(),
+            resource_pool: ResourcePool::default(),
         }
     }
 }
@@ -174,7 +169,7 @@ impl Tracker {
 
         // restore current combatant's actions at the start of their turn
         // TODO: will reset class and spell things when they shouldn't be reset
-        self.current_combatant_mut().resources = Resources::default();
+        self.current_combatant_mut().resource_pool = ResourcePool::default();
     }
 
     /// Get the combatant that is currently taking their turn.
@@ -192,12 +187,19 @@ impl Tracker {
     ///
     /// This function only decrements the number of actions available to the combatant, meaning the
     /// combat log will not display any information about the action taken.
-    pub fn use_action(&mut self) -> bool {
-        let count = &mut self.combatants[self.turn].resources.actions;
-        if *count == 0 {
-            return false;
+    pub fn use_action(&mut self, action: &Action) -> bool {
+        let combatant = self.current_combatant_mut();
+
+        for cost in action.costs() {
+            let current_count = combatant.resource_pool.get_mut(&cost.resource);
+            // TODO: disallow if costs requirements can't be met
+            *current_count = current_count.saturating_sub(cost.amount as i32);
         }
-        *count = count.saturating_sub(1);
+
+        for effect in action.trigger_effects() {
+            effect.apply_to_pool(&mut combatant.resource_pool);
+        }
+
         true
     }
 
@@ -207,7 +209,7 @@ impl Tracker {
     /// This function only decrements the number of bonus actions available to the combatant,
     /// meaning the combat log will not display any information about the bonus action taken.
     pub fn use_bonus_action(&mut self) -> bool {
-        let count = &mut self.combatants[self.turn].resources.bonus_actions;
+        let count = BonusAction::get_mut(&mut self.combatants[self.turn].resource_pool);
         if *count == 0 {
             return false;
         }
@@ -221,7 +223,7 @@ impl Tracker {
     /// This function only decrements the number of reactions available to the combatant, meaning
     /// the combat log will not display any information about the reaction taken.
     pub fn use_reaction(&mut self) -> bool {
-        let count = &mut self.combatants[self.turn].resources.reactions;
+        let count = Reaction::get_mut(&mut self.combatants[self.turn].resource_pool);
         if *count == 0 {
             return false;
         }
