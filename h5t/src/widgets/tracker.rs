@@ -8,16 +8,23 @@ use ratatui::{prelude::*, widgets::*};
 
 /// Creates a [`Line`] widget for displaying the character's action count.
 fn action_line(pool: &ResourcePool) -> Line<'static> {
-    /// Format multiple actions in a compact way (e.g. `Ax4,R`).
+    /// Format multiple actions in a compact way.
+    ///
+    /// Example:
+    ///
+    /// - 0 => "   "
+    /// - 1 => "A  "
+    /// - 2 => "AA "
+    /// - 3 => "AAA"
+    /// - 4 => "Ax4"
     fn fmt_action(label: &str, count: i32) -> String {
-        if count <= 3 {
-            label.repeat(count as usize)
-        } else {
-            format!("{}x{}", label, count)
+        match count {
+            c if c <= 0 => "   ".to_string(),
+            1..=3 => format!("{:<3}", label.repeat(count as usize)),
+            _ => format!("{}x{}", label, count),
         }
     }
 
-    let mut spans = Vec::new();
     let (
         action_count,
         bonus_action_count,
@@ -27,20 +34,14 @@ fn action_line(pool: &ResourcePool) -> Line<'static> {
         BonusAction::get(pool),
         Reaction::get(pool),
     );
-    if action_count > 0 {
-        spans.push(Span::styled(fmt_action("A", action_count), THEME.action));
-        spans.push(Span::styled(",", THEME.foreground));
-    }
-    if bonus_action_count > 0 {
-        spans.push(Span::styled(fmt_action("B", bonus_action_count), THEME.bonus_action));
-        spans.push(Span::styled(",", THEME.foreground));
-    }
-    if reaction_count > 0 {
-        spans.push(Span::styled(fmt_action("R", reaction_count), THEME.reaction));
-        spans.push(Span::styled(",", THEME.foreground));
-    }
-    spans.pop(); // remove the last comma
-    Line::from(spans)
+
+    Line::from(vec![
+        Span::styled(fmt_action("A", action_count), THEME.action),
+        Span::styled("|", THEME.foreground),
+        Span::styled(fmt_action("B", bonus_action_count), THEME.bonus_action),
+        Span::styled("|", THEME.foreground),
+        Span::styled(fmt_action("R", reaction_count), THEME.reaction),
+    ])
 }
 
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
