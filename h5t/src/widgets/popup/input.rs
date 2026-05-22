@@ -1,7 +1,5 @@
-use canvas::Canvas;
-use crate::theme::{Rgb, THEME};
-use ratatui::{layout::Flex, prelude::*, widgets::*};
-use super::popup_area;
+use crate::{theme::{Rgb, THEME}, widgets::popup::Popup};
+use ratatui::prelude::*;
 
 /// A popup to get a line of input from the user.
 ///
@@ -75,46 +73,23 @@ impl Widget for Input<'_> {
         let suffix = self.suffix.unwrap_or("");
 
         // center the input
-        let size = (
-            if suffix.is_empty() {
-                self.prompt.len()
-                    .max(self.max_length + 2) as u16 + 2
-            } else {
-                // box expands to fit the prompt, or the max text input length + suffix + 2 (padding
-                // between them) + 2 (margin around them)
-                //
-                // outside +2 includes the horizontal borders
-                self.prompt.len()
-                    .max(suffix.len() + self.max_length + 2 + 2) as u16 + 2
-            },
-            3, // 2 for borders, 1 for text
-        );
-        let area = popup_area(area, Flex::Center, Flex::End, size, 0);
-
-        // clear the area
-        Clear.render(area, buf);
-        Widget::render(
-            Canvas::default()
-                .background_color(THEME.background.into())
-                .paint(|_| ()),
-            area,
-            buf,
-        );
-
-        let (color, theme) = if self.active {
-            (self.color, THEME)
+        let content_width = if suffix.is_empty() {
+            self.max_length as u16
         } else {
-            (self.color.mix(THEME.background), THEME.dim())
+            // +2 padding between input and suffix
+            (2 + self.max_length + suffix.len()) as u16
+        };
+        let popup = Popup::new(self.color, self.prompt, content_width, 1, self.active);
+        let block_area = popup.block_area(area);
+        popup.render(area, buf);
+
+        let theme = if self.active {
+            THEME
+        } else {
+            THEME.dim()
         };
 
-        // draw bordered box for the input field
-        Block::bordered()
-            .border_type(BorderType::Rounded)
-            .border_style(color)
-            .title(self.prompt)
-            .render(area, buf);
-
-        let text_area = area.inner(Margin::new(2, 1));
+        let text_area = block_area.inner(Margin::new(2, 1));
 
         // show input value underlined
         Span::raw(format!("{}{}", self.value, " ".repeat(self.max_length.saturating_sub(self.value.len()))))

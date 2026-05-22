@@ -107,18 +107,12 @@ impl ApplyCondition {
             self.selected == Field::Conditions,
         ), conditions);
 
-        if self.unit == Unit::UntilNextTurn || self.unit == Unit::Forever {
-            frame.render_widget(Select::new(
-                "For how long?",
-                &self.unit,
-                self.selected == Field::Duration,
-            ), duration);
-        } else {
-            frame.render_widget(Select::new(
-                "For how long?",
-                &self.unit,
-                self.selected == Field::Duration,
-            ), duration_unit);
+        frame.render_widget(Select::new(
+            "For how long?",
+            &self.unit,
+            self.selected == Field::Duration,
+        ), duration_unit);
+        if self.unit == Unit::Round || self.unit == Unit::Minute {
             self.input.draw(frame, duration_amount);
         }
     }

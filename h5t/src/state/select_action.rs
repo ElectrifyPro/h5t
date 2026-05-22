@@ -1,8 +1,7 @@
-use canvas::Canvas;
-use crate::{theme::THEME, ui::LABELS, widgets::popup::popup_area, Tracker};
+use crate::{theme::THEME, ui::LABELS, widgets::popup::Popup, Tracker};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::Action;
-use ratatui::{layout::Flex, prelude::*, widgets::*};
+use ratatui::{prelude::*, widgets::*};
 use super::AfterKey;
 
 /// State for choosing an action to spend an action point on.
@@ -26,34 +25,16 @@ impl SelectAction {
 
     /// Draw the state to the given [`Frame`].
     pub fn draw(&self, frame: &mut Frame) {
-        // self.input.draw(frame, frame.area());
         // TODO: copied from select widget
-
-        let prompt = "Select action";
         let area = frame.area();
-        // center widget
-        // 4 for borders and text padding, 2 for space for labels
-        let content_width = 4 + 2 + self.actions.iter()
+        let buf = frame.buffer_mut();
+        let content_width = 2 + self.actions.iter() // +2 for the labels
             .map(|v| v.name.len())
             .max()
             .unwrap_or(0) as u16;
-        let size = (
-            content_width.max(prompt.len() as u16 + 2),
-            // 2 for top and bottom border
-            2 + self.actions.len() as u16,
-        );
-        let area = popup_area(area, Flex::Center, Flex::Center, size, 0);
-
-        // clear the area
-        let buf = frame.buffer_mut();
-        Clear.render(area, buf);
-        Widget::render(
-            Canvas::default()
-                .background_color(THEME.background.into())
-                .paint(|_| ()),
-            area,
-            buf,
-        );
+        let popup = Popup::new(THEME.foreground, "Select action", content_width, self.actions.len() as u16, true);
+        let block_area = popup.block_area(area);
+        popup.render(area, buf);
 
         let theme = THEME;
         let widget = Table::new(
@@ -78,13 +59,9 @@ impl SelectAction {
                 Constraint::Fill(1),
             ],
         )
-            .block(Block::bordered()
-                .border_type(BorderType::Rounded)
-                .border_style(theme.foreground)
-                .title(prompt)
-                .padding(Padding::symmetric(1, 0)));
+            .block(Block::new().padding(Padding::symmetric(2, 1)));
 
-        Widget::render(widget, area, buf);
+        Widget::render(widget, block_area, buf);
     }
 
     /// Handle a key event and apply any needed changes to the tracker.
