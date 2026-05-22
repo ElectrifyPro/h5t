@@ -121,8 +121,11 @@ impl<B: Backend> Ui<B> {
                 },
                 KeyCode::Char('a') => {
                     // TODO: should open UI to list all things(?) that consume resource: Action
-                    let actions = self.current_combatant().actions();
-                    self.state = Some(State::SelectAction(SelectAction::new(actions)));
+                    let combatant = self.current_combatant();
+                    self.state = Some(State::SelectAction(SelectAction::new(
+                        combatant.actions(),
+                        combatant.resource_pool.clone(),
+                    )));
                 },
                 KeyCode::Char('b') => {
                     self.use_bonus_action();

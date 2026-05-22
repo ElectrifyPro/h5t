@@ -1,6 +1,6 @@
 use crate::{theme::THEME, ui::LABELS, widgets::popup::Popup, Tracker};
 use crossterm::event::{KeyCode, KeyEvent};
-use h5t_core::Action;
+use h5t_core::{resource::ResourcePool, Action};
 use ratatui::{prelude::*, widgets::*};
 use super::AfterKey;
 
@@ -10,15 +10,19 @@ pub struct SelectAction {
     /// The actions to select from.
     actions: Vec<Action>,
 
+    /// The resources the combatant currently has.
+    pool: ResourcePool,
+
     /// Index of the selected action.
     selected: Option<usize>,
 }
 
 impl SelectAction {
     /// Create an [`SelectAction`] state with the given combatants.
-    pub fn new(actions: Vec<Action>) -> Self {
+    pub fn new(actions: Vec<Action>, pool: ResourcePool) -> Self {
         Self {
             actions,
+            pool,
             selected: None,
         }
     }
@@ -36,12 +40,16 @@ impl SelectAction {
         let block_area = popup.block_area(area);
         popup.render(area, buf);
 
-        let theme = THEME;
         let widget = Table::new(
             LABELS.chars()
                 .zip(&self.actions)
                 .enumerate()
-                .map(|(idx, (label, option))| {
+                .map(|(idx, (label, action))| {
+                    let theme = if self.pool.can_perform(action.costs()) {
+                        THEME
+                    } else {
+                        THEME.dim()
+                    };
                     let mut style = Style::default()
                         .fg(theme.foreground.into());
 
@@ -51,7 +59,7 @@ impl SelectAction {
 
                     Row::new(vec![
                         Text::styled(label.to_string(), Modifier::BOLD),
-                        Text::raw(&option.name),
+                        Text::raw(&action.name),
                     ]).style(style)
                 }),
             [

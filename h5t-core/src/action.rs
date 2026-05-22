@@ -1,4 +1,7 @@
-use crate::{resource::{Action as ActionRes, BonusAction, Cost, Resource, ResourcePool}, Id};
+use crate::{
+    resource::{Action as ActionRes, BonusAction, Cost, Reaction, Resource, ResourcePool},
+    Id,
+};
 
 #[derive(Clone, Debug)]
 pub enum Effect {
@@ -75,6 +78,16 @@ Any increase or decrease to your speed changes this additional movement by the s
                 ],
                 on_trigger: vec![
                     Effect::GrantResource(BonusAction::ID, 1),
+                ],
+            },
+            Action {
+                id: "free-action+reactions".to_string(),
+                name: "Free Action and Reactions".to_string(),
+                desc: "testing: get a free action and 2 reactions".to_string(),
+                costs: vec![],
+                on_trigger: vec![
+                    Effect::GrantResource(ActionRes::ID, 1),
+                    Effect::GrantResource(Reaction::ID, 2),
                 ],
             },
         ]

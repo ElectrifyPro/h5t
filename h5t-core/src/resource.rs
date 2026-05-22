@@ -6,7 +6,7 @@ use std::{borrow::Cow, collections::HashMap};
 /// The number of resources available to a combatant, including action count, bonus action count,
 /// reaction count, movement, and resources granted by classes (e.g. Superiority dice) and spells
 /// (e.g. Haste action).
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ResourcePool(pub(crate) HashMap<Id, i32>);
 
 impl ResourcePool {
@@ -18,6 +18,25 @@ impl ResourcePool {
     /// Get a mutable reference to the count for a specified resource.
     pub fn get_mut(&mut self, id: &Id) -> &mut i32 {
         self.0.entry(id.clone()).or_default()
+    }
+
+    /// Determines if there are enough resources in this pool to perform an action that costs the
+    /// given amount.
+    pub fn can_perform(&self, costs: &[Cost]) -> bool {
+        let mut required = HashMap::new();
+        for cost in costs {
+            *required.entry(cost.resource.clone()).or_default() += cost.amount;
+        }
+
+        required.into_iter().all(|(resource, needed)| {
+            let available = self.get(&resource);
+
+            if available < 0 {
+                return false;
+            }
+
+            available as u32 >= needed
+        })
     }
 }
 
