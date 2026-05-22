@@ -11,7 +11,7 @@ pub struct SelectAction {
     actions: Vec<Action>,
 
     /// Index of the selected action.
-    selected: usize,
+    selected: Option<usize>,
 }
 
 impl SelectAction {
@@ -19,7 +19,7 @@ impl SelectAction {
     pub fn new(actions: Vec<Action>) -> Self {
         Self {
             actions,
-            selected: 0,
+            selected: None,
         }
     }
 
@@ -45,7 +45,7 @@ impl SelectAction {
                     let mut style = Style::default()
                         .fg(theme.foreground.into());
 
-                    if self.selected == idx {
+                    if let Some(selected_idx) = self.selected && selected_idx == idx {
                         style = style.bold().bg(theme.select.into());
                     }
 
@@ -68,17 +68,19 @@ impl SelectAction {
     pub fn handle_key(&mut self, key: KeyEvent, tracker: &mut Tracker) -> AfterKey {
         match key.code {
             KeyCode::Esc => AfterKey::Exit,
-            KeyCode::Enter => {
-                tracker.use_action(&self.actions[self.selected]);
+            KeyCode::Enter => if let Some(idx) = self.selected {
+                tracker.use_action(&self.actions[idx]);
                 AfterKey::Exit
+            } else {
+                AfterKey::Stay
             },
             KeyCode::Char(label) => {
                 let Some(idx) = LABELS.chars().position(|ch| ch == label) else {
                     return AfterKey::Stay;
                 };
 
-                if self.selected < self.actions.len() {
-                    self.selected = idx;
+                if idx < self.actions.len() {
+                    self.selected = Some(idx);
                 }
 
                 AfterKey::Stay
