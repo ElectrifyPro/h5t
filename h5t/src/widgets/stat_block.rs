@@ -4,7 +4,7 @@ use ratatui::{prelude::*, widgets::*};
 use super::AbilityScores;
 
 /// Creates a [`Paragraph`] widget for displaying the monster's name and type.
-fn name_and_type_paragraph(monster: &Monster) -> Paragraph {
+fn name_and_type_paragraph(monster: &Monster) -> Paragraph<'_> {
     let size = match monster.size {
         Size::Tiny => "Tiny",
         Size::Small => "Small",
@@ -51,7 +51,7 @@ fn name_and_type_paragraph(monster: &Monster) -> Paragraph {
 }
 
 /// Creates a [`Table`] widget for displaying a monster's basic statistics.
-fn basic_stats_table(monster: &Monster) -> Table {
+fn basic_stats_table(monster: &Monster) -> Table<'_> {
     /// Format's a speed value.
     fn fmt_speed(speed: &Speed) -> String {
         let mut parts = String::new();
@@ -129,7 +129,7 @@ fn basic_stats_table(monster: &Monster) -> Table {
 }
 
 /// Creates a [`Paragraph`] widget for displaying a monster's traits.
-fn traits_paragraph(monster: &Monster) -> Paragraph {
+fn traits_paragraph(monster: &Monster) -> Paragraph<'_> {
     use itertools::Itertools;
 
     let text = monster

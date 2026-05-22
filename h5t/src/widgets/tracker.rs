@@ -46,7 +46,7 @@ fn action_line(pool: &ResourcePool) -> Line<'static> {
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
 fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
     /// Builds a table [`Row`] for a combatant.
-    fn combatant_row(label: Option<char>, combatant: &Combatant) -> Row {
+    fn combatant_row(label: Option<char>, combatant: &Combatant) -> Row<'_> {
         let label_text = label
             .map(|l| Text::from(format!("{}", l)).bold())
             .unwrap_or_default();
