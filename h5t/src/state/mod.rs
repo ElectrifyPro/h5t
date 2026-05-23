@@ -1,10 +1,12 @@
 pub mod apply_condition;
 pub mod apply_damage;
 pub mod select_action;
+pub mod use_movement;
 
 pub use apply_condition::ApplyCondition;
 pub use apply_damage::ApplyDamage;
 pub use select_action::SelectAction;
+pub use use_movement::UseMovement;
 use h5t_core::Tracker;
 
 /// What to do after handling a key event.
@@ -30,6 +32,9 @@ pub enum State {
 
     /// Choosing an action to spend an action point on.
     SelectAction(SelectAction),
+
+    /// Moving.
+    UseMovement(UseMovement),
 }
 
 impl State {
@@ -39,6 +44,7 @@ impl State {
             Self::ApplyCondition(state) => state.draw(frame),
             Self::ApplyDamage(state) => state.draw(frame),
             Self::SelectAction(state) => state.draw(frame),
+            Self::UseMovement(state) => state.draw(frame),
         }
     }
 
@@ -52,6 +58,7 @@ impl State {
             Self::ApplyCondition(state) => state.handle_key(key, tracker),
             Self::ApplyDamage(state) => state.handle_key(key, tracker),
             Self::SelectAction(state) => state.handle_key(key, tracker),
+            Self::UseMovement(state) => state.handle_key(key, tracker),
         }
     }
 }

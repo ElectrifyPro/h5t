@@ -124,6 +124,12 @@ impl<T: FromStr> GetInput<T> {
         }
     }
 
+    /// Given a mutable reference to the input, set the value in the input.
+    pub fn set_value(&mut self, value: impl Into<String>) -> &mut Self {
+        self.value = value.into();
+        self
+    }
+
     /// Set the suffix to display after the input value, indicating the expected format / unit of
     /// the input.
     pub fn suffix(mut self, suffix: impl Into<String>) -> Self {
@@ -131,9 +137,15 @@ impl<T: FromStr> GetInput<T> {
         self
     }
 
-    /// Given a mutable refernece to the input, set the suffix to display after the input value.
+    /// Given a mutable reference to the input, set the suffix to display after the input value.
     pub fn set_suffix(&mut self, suffix: impl Into<String>) -> &mut Self {
         self.suffix = Some(suffix.into());
+        self
+    }
+
+    /// Set the active state of the widget.
+    pub fn active(mut self, active: bool) -> Self {
+        self.active = active;
         self
     }
 
@@ -180,6 +192,11 @@ impl<T: FromStr> GetInput<T> {
                 Some(AfterKey::Forward(key))
             },
         }
+    }
+
+    /// Retrieve the parsed value.
+    pub fn get_parsed(&self) -> Result<T, T::Err> {
+        T::from_str(&self.value)
     }
 
     /// Handle a key event and update the input value.

@@ -1,6 +1,6 @@
 use bimap::BiMap;
 use crate::{
-    state::{AfterKey, ApplyCondition, ApplyDamage, SelectAction, State},
+    state::{AfterKey, ApplyCondition, ApplyDamage, SelectAction, State, UseMovement},
     theme::THEME,
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
@@ -118,6 +118,9 @@ impl<B: Backend> Ui<B> {
                         continue;
                     }
                     self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
+                },
+                KeyCode::Char('m') => {
+                    self.state = Some(State::UseMovement(UseMovement::new()));
                 },
                 KeyCode::Char('a') => {
                     // TODO: should open UI to list all things(?) that consume resource: Action

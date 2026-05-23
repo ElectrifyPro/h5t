@@ -17,13 +17,13 @@ use ratatui::{prelude::*, widgets::*};
 /// Creates a [`Text`] widget for displaying the character's movement speed amount.
 fn movement_speed(pool: &ResourcePool) -> Text<'static> {
     let (
-        base_movement_speed,
         movement_speed,
+        base_movement_speed,
     ) = (
-        BaseMovementSpeed::get(pool),
         MovementSpeed::get(pool),
+        BaseMovementSpeed::get(pool),
     );
-    Text::from(format!("{}ft. / {}ft.", base_movement_speed, movement_speed))
+    Text::from(format!("{}ft. / {}ft.", movement_speed, base_movement_speed))
 }
 
 /// Creates a [`Line`] widget for displaying the character's action count.
