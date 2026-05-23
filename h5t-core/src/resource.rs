@@ -44,6 +44,8 @@ impl ResourcePool {
 impl Default for ResourcePool {
     fn default() -> Self {
         Self(HashMap::from([
+            (BaseMovementSpeed::ID, 30), // TODO: races have different base speed
+            (MovementSpeed::ID, 30),
             (Action::ID, 1),
             (BonusAction::ID, 1),
             (Reaction::ID, 1),
@@ -62,6 +64,20 @@ pub trait Resource {
     fn get_mut(pool: &mut ResourcePool) -> &mut i32 {
         pool.get_mut(&Self::ID)
     }
+}
+
+/// Amount of movement a creature will have at the start of its turn, given in feet.
+pub struct BaseMovementSpeed;
+
+impl Resource for BaseMovementSpeed {
+    const ID: Id = Id(Cow::Borrowed("base-movement-speed"));
+}
+
+/// Amount of movement a creature currently has, given in feet.
+pub struct MovementSpeed;
+
+impl Resource for MovementSpeed {
+    const ID: Id = Id(Cow::Borrowed("movement-speed"));
 }
 
 /// Number of actions, used for attacks, casting various spells, helping, etc.

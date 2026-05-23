@@ -1,10 +1,30 @@
 use crate::{theme::THEME, ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
 use h5t_core::{
-    resource::{Action, BonusAction, Reaction, Resource, ResourcePool},
+    resource::{
+        Action,
+        BaseMovementSpeed,
+        BonusAction,
+        MovementSpeed,
+        Reaction,
+        Resource,
+        ResourcePool,
+    },
     Combatant,
     Tracker as CoreTracker,
 };
 use ratatui::{prelude::*, widgets::*};
+
+/// Creates a [`Text`] widget for displaying the character's movement speed amount.
+fn movement_speed(pool: &ResourcePool) -> Text<'static> {
+    let (
+        base_movement_speed,
+        movement_speed,
+    ) = (
+        BaseMovementSpeed::get(pool),
+        MovementSpeed::get(pool),
+    );
+    Text::from(format!("{}ft. / {}ft.", base_movement_speed, movement_speed))
+}
 
 /// Creates a [`Line`] widget for displaying the character's action count.
 fn action_line(pool: &ResourcePool) -> Line<'static> {
@@ -54,6 +74,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
         Row::new([
             label_text,
             Text::from(combatant.name()),
+            movement_speed(&combatant.resource_pool),
             action_line(&combatant.resource_pool).into(),
             HitPoints::new(combatant).line().into(),
             CompactConditions::new(combatant).line().into(),
@@ -99,6 +120,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
         [
             Constraint::Length(2), // label mode
             Constraint::Fill(2),   // name
+            Constraint::Fill(1),   // movement
             Constraint::Fill(1),   // actions
             Constraint::Fill(1),   // hp / max hp
             Constraint::Fill(1),   // conditions
@@ -108,6 +130,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
             Row::new([
                 Text::raw(""),
                 Text::from("Name").centered(),
+                Text::from("Movement").centered(),
                 Text::from("Actions").centered(),
                 Text::from("HP / Max HP").centered(),
                 Text::from("Conditions").centered(),
