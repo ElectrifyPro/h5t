@@ -155,7 +155,7 @@ impl<B: Backend> Ui<B> {
     }
 
     /// Draw the tracker to the terminal.
-    pub fn draw(&mut self) -> std::io::Result<ratatui::CompletedFrame<'_>> {
+    pub fn draw(&mut self) -> Result<ratatui::CompletedFrame<'_>, B::Error> {
         self.terminal.draw(|frame| {
             // clear the area
             frame.render_widget(
