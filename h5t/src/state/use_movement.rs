@@ -5,7 +5,7 @@ use crate::{
     Tracker,
 };
 use crossterm::event::{KeyCode, KeyEvent};
-use h5t_core::resource::{MovementSpeed, Resource};
+use h5t_core::resource::{MovementUsed, Resource};
 use ratatui::{layout::{Flex, Offset}, prelude::*};
 use super::AfterKey;
 
@@ -128,12 +128,12 @@ impl UseMovement {
 
         let calculation = if self.difficult_terrain {
             format!(
-                "{} ft * 2 = {} ft movement used",
+                "will use: {} ft * 2 = {} ft movement",
                 self.distance.get_feet(),
                 movement_used
             )
         } else {
-            format!("{} ft movement used", movement_used)
+            format!("will use: {} ft movement", movement_used)
         };
 
         let calc_width = calculation.len() as u16;
@@ -173,16 +173,16 @@ impl UseMovement {
                 AfterKey::Stay
             },
             AfterKeyInner::Submit(_) => {
-                let speed_used = if self.difficult_terrain {
+                let given_speed = if self.difficult_terrain {
                     self.distance.get_difficult_terrain_feet()
                 } else {
                     self.distance.get_feet()
                 };
-                let current_speed = tracker
+                let movement_used = tracker
                     .current_combatant_mut()
                     .resource_pool
-                    .get_mut(&MovementSpeed::ID);
-                *current_speed -= speed_used;
+                    .get_mut(&MovementUsed::ID);
+                *movement_used += given_speed;
                 AfterKey::Exit
             },
             AfterKeyInner::Cancel => AfterKey::Exit,

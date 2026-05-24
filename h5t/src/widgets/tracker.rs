@@ -2,9 +2,8 @@ use crate::{theme::THEME, ui::LabelModeState, widgets::{CompactConditions, HitPo
 use h5t_core::{
     resource::{
         Action,
-        BaseMovementSpeed,
         BonusAction,
-        MovementSpeed,
+        MovementUsed,
         Reaction,
         Resource,
         ResourcePool,
@@ -12,18 +11,34 @@ use h5t_core::{
     Combatant,
     Tracker as CoreTracker,
 };
+use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 
-/// Creates a [`Text`] widget for displaying the character's movement speed amount.
-fn movement_speed(pool: &ResourcePool) -> Text<'static> {
-    let (
-        movement_speed,
-        base_movement_speed,
-    ) = (
-        MovementSpeed::get(pool),
-        BaseMovementSpeed::get(pool),
-    );
-    Text::from(format!("{}ft. / {}ft.", movement_speed, base_movement_speed))
+/// Creates a [`Text`] widget for displaying the character's remaining movement.
+fn movement_speed(combatant: &Combatant) -> Line<'static> {
+    let base_speed = combatant.speed();
+    let movement_used = MovementUsed::get(&combatant.resource_pool);
+
+    // create a `Span` for each speed value
+    let make_span = |prefix: &str, speed: Option<i32>| {
+        speed
+            .map(|speed| speed - movement_used)
+            .filter(|speed| *speed > 0)
+            .map(|speed| Span::from(format!("{} {} ft.", prefix, speed)))
+    };
+
+    [
+        make_span("", base_speed.walk),
+        make_span("B", base_speed.burrow),
+        make_span("C", base_speed.climb),
+        make_span("F", base_speed.fly),
+        make_span("S", base_speed.swim),
+    ]
+        .into_iter()
+        .flatten()
+        .intersperse(Span::raw("|"))
+        .collect::<Vec<_>>()
+        .into()
 }
 
 /// Creates a [`Line`] widget for displaying the character's action count.
@@ -74,7 +89,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
         Row::new([
             label_text,
             Text::from(combatant.name()),
-            movement_speed(&combatant.resource_pool),
+            movement_speed(combatant).into(),
             action_line(&combatant.resource_pool).into(),
             HitPoints::new(combatant).line().into(),
             CompactConditions::new(combatant).line().into(),
