@@ -1,7 +1,6 @@
-use crate::theme::THEME;
-use h5t_core::{monster::{Size, Speed, Type, Usage}, Monster};
+use crate::{theme::THEME, widgets::{AbilityScores, fmt_speed}};
+use h5t_core::{monster::{Size, Type, Usage}, Monster};
 use ratatui::{prelude::*, widgets::*};
-use super::AbilityScores;
 
 /// Creates a [`Paragraph`] widget for displaying the monster's name and type.
 fn name_and_type_paragraph(monster: &Monster) -> Paragraph<'_> {
@@ -52,38 +51,6 @@ fn name_and_type_paragraph(monster: &Monster) -> Paragraph<'_> {
 
 /// Creates a [`Table`] widget for displaying a monster's basic statistics.
 fn basic_stats_table(monster: &Monster) -> Table<'_> {
-    /// Format's a speed value.
-    fn fmt_speed(speed: &Speed) -> String {
-        let mut parts = String::new();
-        if let Some(speed) = &speed.walk {
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.burrow {
-            parts.push_str("burrow ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.climb {
-            parts.push_str("climb ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.fly {
-            parts.push_str("fly ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.swim {
-            parts.push_str("swim ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        parts.pop(); // remove trailing comma
-        parts.pop(); // remove trailing space
-        parts
-    }
-
     /// Formats a challenge rating.
     fn fmt_cr(cr: f32, xp: i32) -> String {
         let cr_value = if cr == 0.0 {

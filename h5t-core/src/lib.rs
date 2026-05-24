@@ -60,7 +60,7 @@ impl Combatant {
         }
     }
 
-    /// Returns the combatant's speed.
+    /// Returns the combatant's base speed.
     pub fn speed(&self) -> &Speed {
         match &self.kind {
             CombatantKind::Monster(monster) => &monster.speed,

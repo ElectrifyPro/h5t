@@ -1,8 +1,9 @@
-use h5t_core::{monster::Speed, Combatant};
+use crate::{
+    theme::THEME,
+    widgets::{conditions::FullConditions, AbilityScores, HitPoints, fmt_speed},
+};
+use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::*};
-use crate::{theme::THEME, widgets::conditions::FullConditions};
-
-use super::{AbilityScores, HitPoints};
 
 /// Creates a [`Text`] widget for displaying the combatant's name and whether they are dead.
 fn basic_status_text(combatant: &Combatant) -> Text<'_> {
@@ -15,38 +16,6 @@ fn basic_status_text(combatant: &Combatant) -> Text<'_> {
 
 /// Creates a [`Table`] widget for displaying a monster's basic statistics.
 fn basic_stats_table(combatant: &Combatant) -> Table<'_> {
-    /// Format's a speed value.
-    fn fmt_speed(speed: &Speed) -> String {
-        let mut parts = String::new();
-        if let Some(speed) = &speed.walk {
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.burrow {
-            parts.push_str("burrow ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.climb {
-            parts.push_str("climb ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.fly {
-            parts.push_str("fly ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        if let Some(speed) = &speed.swim {
-            parts.push_str("swim ");
-            parts.push_str(speed);
-            parts.push_str(", ");
-        }
-        parts.pop(); // remove trailing comma
-        parts.pop(); // remove trailing space
-        parts
-    }
-
     Table::new(
         vec![
             Row::new(vec![
