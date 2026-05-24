@@ -99,6 +99,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
     Table::new(
         widget.tracker.combatants.iter()
             .enumerate()
+            .skip(widget.start_index)
             .map(|(i, combatant)| {
                 let is_current_turn = i == widget.tracker.turn;
                 let label = widget.label_state.labels.get_by_right(&i).copied();
@@ -161,19 +162,23 @@ pub struct Tracker<'a> {
     /// The tracker to display.
     pub tracker: &'a CoreTracker,
 
+    /// Index of the first combatant listed in the tracker, used to scroll through the initiative
+    /// tracker.
+    pub start_index: usize,
+
     /// State for label mode.
     pub label_state: LabelModeState,
 }
 
 impl<'a> Tracker<'a> {
     /// Create a new [`Tracker`] widget.
-    pub fn new(tracker: &'a CoreTracker) -> Self {
-        Self { tracker, label_state: LabelModeState::default() }
+    pub fn new(tracker: &'a CoreTracker, start_index: usize) -> Self {
+        Self { tracker, start_index, label_state: LabelModeState::default() }
     }
 
     /// Create a new [`Tracker`] widget with the given labels.
-    pub fn with_labels(tracker: &'a CoreTracker, label: LabelModeState) -> Self {
-        Self { tracker, label_state: label }
+    pub fn with_labels(tracker: &'a CoreTracker, start_index: usize, label: LabelModeState) -> Self {
+        Self { tracker, start_index, label_state: label }
     }
 }
 

@@ -61,6 +61,10 @@ pub struct Ui<B: Backend> {
     /// The currently active state.
     state: Option<State>,
 
+    /// Index of the first combatant listed in the tracker, used to scroll through the initiative
+    /// tracker.
+    start_index: usize,
+
     /// State for label mode.
     label_state: Option<LabelModeState>,
 }
@@ -79,6 +83,7 @@ impl<B: Backend> Ui<B> {
             tracker,
             info_block: InfoBlock::CombatantCard,
             state: None,
+            start_index: 0,
             label_state: None,
         }
     }
@@ -103,6 +108,10 @@ impl<B: Backend> Ui<B> {
             }
 
             match key.code {
+                KeyCode::Up => self.start_index = self.start_index.saturating_sub(1),
+                KeyCode::Down => if self.start_index < self.tracker.combatants.len() {
+                    self.start_index += 1;
+                },
                 KeyCode::Char('c') => {
                     let selected = self.enter_label_mode();
                     if selected.is_empty() {
@@ -175,9 +184,9 @@ impl<B: Backend> Ui<B> {
 
             // show tracker
             let tracker_widget = if let Some(label) = &self.label_state {
-                TrackerWidget::with_labels(&self.tracker, label.clone())
+                TrackerWidget::with_labels(&self.tracker, self.start_index, label.clone())
             } else {
-                TrackerWidget::new(&self.tracker)
+                TrackerWidget::new(&self.tracker, self.start_index)
             };
             frame.render_widget(tracker_widget, tracker_area);
 
@@ -269,6 +278,6 @@ impl<B: Backend> DerefMut for Ui<B> {
 
 impl<B: Backend> Widget for Ui<B> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        TrackerWidget::new(&self.tracker).render(area, buf);
+        TrackerWidget::new(&self.tracker, self.start_index).render(area, buf);
     }
 }
