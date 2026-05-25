@@ -102,8 +102,15 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
             .skip(widget.start_index)
             .map(|(i, combatant)| {
                 let is_current_turn = i == widget.tracker.turn;
-                let label = widget.label_state.labels.get_by_right(&i).copied();
-                let is_label_selected = widget.label_state.selected.contains(&label.unwrap_or_default());
+                let (label, is_label_selected) = if let Some(label_state) = widget.label_state {
+                    let label = label_state.labels.get_by_right(&i).copied();
+                    (
+                        label,
+                        label_state.selected.contains(&label.unwrap_or_default()),
+                    )
+                } else {
+                    (None, false)
+                };
 
                 let row = combatant_row(label, combatant);
                 let mut style = Style::default().fg(THEME.foreground.into());
@@ -167,18 +174,22 @@ pub struct Tracker<'a> {
     pub start_index: usize,
 
     /// State for label mode.
-    pub label_state: LabelModeState,
+    pub label_state: Option<&'a LabelModeState>,
 }
 
 impl<'a> Tracker<'a> {
     /// Create a new [`Tracker`] widget.
     pub fn new(tracker: &'a CoreTracker, start_index: usize) -> Self {
-        Self { tracker, start_index, label_state: LabelModeState::default() }
+        Self { tracker, start_index, label_state: None }
     }
 
     /// Create a new [`Tracker`] widget with the given labels.
-    pub fn with_labels(tracker: &'a CoreTracker, start_index: usize, label: LabelModeState) -> Self {
-        Self { tracker, start_index, label_state: label }
+    pub fn with_labels(
+        tracker: &'a CoreTracker,
+        start_index: usize,
+        label_state: &'a LabelModeState,
+    ) -> Self {
+        Self { tracker, start_index, label_state: Some(label_state) }
     }
 }
 

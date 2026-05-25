@@ -65,7 +65,8 @@ pub struct Ui<B: Backend> {
     /// tracker.
     start_index: usize,
 
-    /// State for label mode.
+    /// The current label mode state, held over while a state is being processed. This allows the
+    /// tracker to keep highlighting selected combatants during the state's execution.
     label_state: Option<LabelModeState>,
 }
 
@@ -115,7 +116,6 @@ impl<B: Backend> Ui<B> {
                 KeyCode::Char('c') => {
                     let selected = self.enter_label_mode();
                     if selected.is_empty() {
-                        self.label_state = None;
                         continue;
                     }
                     self.state = Some(State::ApplyCondition(ApplyCondition::new(selected)));
@@ -123,7 +123,6 @@ impl<B: Backend> Ui<B> {
                 KeyCode::Char('d') => {
                     let selected = self.enter_label_mode();
                     if selected.is_empty() {
-                        self.label_state = None;
                         continue;
                     }
                     self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
@@ -183,8 +182,8 @@ impl<B: Backend> Ui<B> {
             ]).areas(frame.area());
 
             // show tracker
-            let tracker_widget = if let Some(label) = &self.label_state {
-                TrackerWidget::with_labels(&self.tracker, self.start_index, label.clone())
+            let tracker_widget = if let Some(label) = self.label_state.as_ref() {
+                TrackerWidget::with_labels(&self.tracker, self.start_index, label)
             } else {
                 TrackerWidget::new(&self.tracker, self.start_index)
             };
@@ -209,12 +208,12 @@ impl<B: Backend> Ui<B> {
 
     /// Enters label mode.
     ///
-    /// Label mode is a special state where the user can quickly select one or more combatants
-    /// to apply an action to. This works by displaying a label next to each combatant's name, and
-    /// the user can press the corresponding key to toggle the label on or off.
+    /// Label mode is a special state where the user can quickly select one or more combatants to
+    /// apply an action to. This works by displaying a label next to each combatant's name, and the
+    /// user can press the corresponding key to toggle the label on or off.
     ///
-    /// This function blocks until the user selects the combatants and presses the `Enter` key,
-    /// returning mutable references to the selected combatants.
+    /// This function blocks until the user selects the combatants and presses the `Enter` key, and
+    /// returns the indices of the selected combatants.
     pub fn enter_label_mode(&mut self) -> Vec<usize> {
         let size = self.terminal.size().unwrap();
         let num_combatants_in_view = max_combatants(size).min(self.combatants.len());
@@ -224,16 +223,19 @@ impl<B: Backend> Ui<B> {
             // .skip(self.turn) // TODO: change when pagination is implemented
             .map(|i| (LABELS.chars().nth(i).unwrap(), i))
             .collect::<BiMap<_, _>>();
+        let selected_labels = HashSet::new();
+
+        let mut label_state = LabelModeState {
+            labels: label_to_combatant_idx,
+            selected: selected_labels,
+        };
 
         // watch for user-input and select combatants
-        let mut selected_labels = HashSet::new();
         loop {
             // render tracker with labels
-            self.label_state = Some(LabelModeState {
-                labels: label_to_combatant_idx.clone(),
-                selected: selected_labels.clone(),
-            });
+            self.label_state = Some(label_state);
             self.draw().unwrap();
+            label_state = self.label_state.take().unwrap();
 
             // wait for user input
             if let Ok(Event::Key(key)) = read() {
@@ -241,11 +243,11 @@ impl<B: Backend> Ui<B> {
                     KeyCode::Esc => return vec![],
                     KeyCode::Enter => break,
                     KeyCode::Char(label) => {
-                        if label_to_combatant_idx.contains_left(&label) {
-                            if selected_labels.contains(&label) {
-                                selected_labels.remove(&label);
+                        if label_state.labels.contains_left(&label) {
+                            if label_state.selected.contains(&label) {
+                                label_state.selected.remove(&label);
                             } else {
-                                selected_labels.insert(label);
+                                label_state.selected.insert(label);
                             }
                         }
                     },
@@ -254,11 +256,16 @@ impl<B: Backend> Ui<B> {
             }
         }
 
-        // return selected combatants
-        selected_labels
-            .into_iter()
-            .filter_map(|label| label_to_combatant_idx.get_by_left(&label).copied())
-            .collect()
+        let selected_combatants = label_state.selected
+            .iter()
+            .filter_map(|label| label_state.labels.get_by_left(label).copied())
+            .collect();
+
+        if !label_state.selected.is_empty() {
+            self.label_state = Some(label_state);
+        }
+
+        selected_combatants
     }
 }
 
