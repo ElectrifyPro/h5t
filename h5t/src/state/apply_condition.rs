@@ -5,10 +5,10 @@ use crate::{
     widgets::popup::{popup_area, Multiselect, Select},
     Tracker,
 };
-use std::{collections::{HashMap, HashSet}, num::NonZeroU32};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::{Condition, ConditionDuration, ConditionKind};
 use ratatui::{layout::Flex, prelude::*};
+use std::{collections::{HashMap, HashSet}, num::NonZeroU32};
 use super::AfterKey;
 
 /// Helper enum to indicate which form field is currently selected.
@@ -57,7 +57,7 @@ impl std::fmt::Display for Unit {
 #[derive(Clone, Debug)]
 pub struct ApplyCondition {
     /// The combatant indices to apply damage to.
-    combatants: Vec<usize>,
+    combatants: HashSet<usize>,
 
     /// The conditions to apply to combatants.
     conditions: HashSet<ConditionKind>,
@@ -74,7 +74,7 @@ pub struct ApplyCondition {
 
 impl ApplyCondition {
     /// Create an [`ApplyCondition`] state with the initial state.
-    pub fn new(combatants: Vec<usize>) -> Self {
+    pub fn new(combatants: HashSet<usize>) -> Self {
         Self {
             combatants,
             conditions: HashSet::new(),

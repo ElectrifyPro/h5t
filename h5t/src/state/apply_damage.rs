@@ -1,13 +1,14 @@
 use crate::{input::{AfterKey as AfterKeyInner, Charset, GetInput}, Tracker};
 use crossterm::event::KeyEvent;
 use ratatui::prelude::*;
+use std::collections::HashSet;
 use super::AfterKey;
 
 /// State for applying damage to combatants.
 #[derive(Clone, Debug, Default)]
 pub struct ApplyDamage {
     /// The combatant indices to apply damage to.
-    combatants: Vec<usize>,
+    combatants: HashSet<usize>,
 
     /// Helper to get input from the user.
     input: GetInput<i32>,
@@ -15,7 +16,7 @@ pub struct ApplyDamage {
 
 impl ApplyDamage {
     /// Create an [`ApplyDamage`] state with the given combatants.
-    pub fn new(combatants: Vec<usize>) -> Self {
+    pub fn new(combatants: HashSet<usize>) -> Self {
         Self {
             combatants,
             input: GetInput::new("Damage amount", 4, Charset::Numeric) // damage is usually 1-2 digits

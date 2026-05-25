@@ -43,8 +43,8 @@ pub struct LabelModeState {
     /// The labels to display next to each combatant.
     pub labels: BiMap<char, usize>,
 
-    /// The labels that have been selected.
-    pub selected: HashSet<char>,
+    /// Indices of all combatants that have been selected.
+    pub selected_combatants: HashSet<usize>,
 }
 
 /// A wrapper around a [`Tracker`] that handles UI-dependent logic, such as label mode.
@@ -63,7 +63,7 @@ pub struct Ui<B: Backend> {
 
     /// Index of the first combatant listed in the tracker, used to scroll through the initiative
     /// tracker.
-    start_index: usize,
+    scroll_index: usize,
 
     /// The current label mode state, held over while a state is being processed. This allows the
     /// tracker to keep highlighting selected combatants during the state's execution.
@@ -84,7 +84,7 @@ impl<B: Backend> Ui<B> {
             tracker,
             info_block: InfoBlock::CombatantCard,
             state: None,
-            start_index: 0,
+            scroll_index: 0,
             label_state: None,
         }
     }
@@ -109,9 +109,9 @@ impl<B: Backend> Ui<B> {
             }
 
             match key.code {
-                KeyCode::Up => self.start_index = self.start_index.saturating_sub(1),
-                KeyCode::Down => if self.start_index < self.tracker.combatants.len() {
-                    self.start_index += 1;
+                KeyCode::Up => self.scroll_index = self.scroll_index.saturating_sub(1),
+                KeyCode::Down => if self.scroll_index < self.tracker.combatants.len() {
+                    self.scroll_index += 1;
                 },
                 KeyCode::Char('c') => {
                     let selected = self.enter_label_mode();
@@ -183,9 +183,9 @@ impl<B: Backend> Ui<B> {
 
             // show tracker
             let tracker_widget = if let Some(label) = self.label_state.as_ref() {
-                TrackerWidget::with_labels(&self.tracker, self.start_index, label)
+                TrackerWidget::with_labels(&self.tracker, self.scroll_index, label)
             } else {
-                TrackerWidget::new(&self.tracker, self.start_index)
+                TrackerWidget::new(&self.tracker, self.scroll_index)
             };
             frame.render_widget(tracker_widget, tracker_area);
 
@@ -214,20 +214,24 @@ impl<B: Backend> Ui<B> {
     ///
     /// This function blocks until the user selects the combatants and presses the `Enter` key, and
     /// returns the indices of the selected combatants.
-    pub fn enter_label_mode(&mut self) -> Vec<usize> {
+    pub fn enter_label_mode(&mut self) -> HashSet<usize> {
         let size = self.terminal.size().unwrap();
-        let num_combatants_in_view = max_combatants(size).min(self.combatants.len());
 
-        // generate labels for all combatants in view
-        let label_to_combatant_idx = (0..num_combatants_in_view)
-            // .skip(self.turn) // TODO: change when pagination is implemented
-            .map(|i| (LABELS.chars().nth(i).unwrap(), i))
-            .collect::<BiMap<_, _>>();
-        let selected_labels = HashSet::new();
+        // map as many labels as possible to combatants in the visible window. the window will never
+        // be larger than the maximum possible number of combatants.
+        let make_label_window = |start_index: usize| {
+            LABELS
+                .chars()
+                .zip(start_index..)
+                .take(max_combatants(size))
+                .collect::<BiMap<_, _>>()
+        };
 
+        // for all combatants in view, generate as many labels as we can for them
+        let mut current_start_index = self.scroll_index;
         let mut label_state = LabelModeState {
-            labels: label_to_combatant_idx,
-            selected: selected_labels,
+            labels: make_label_window(current_start_index),
+            selected_combatants: HashSet::new(),
         };
 
         // watch for user-input and select combatants
@@ -240,14 +244,51 @@ impl<B: Backend> Ui<B> {
             // wait for user input
             if let Ok(Event::Key(key)) = read() {
                 match key.code {
-                    KeyCode::Esc => return vec![],
+                    KeyCode::Esc => return HashSet::new(),
                     KeyCode::Enter => break,
+                    KeyCode::BackTab => {
+                        // shift + tab = move label window backwards
+                        // shift window back by its size so there are no overlaps
+                        // TODO: windows can overlap near the beginning of the initiative list.
+                        current_start_index = current_start_index
+                            .saturating_sub(label_state.labels.len());
+                        label_state.labels = make_label_window(current_start_index);
+
+                        // does the window begin outside the visible range of combatants?
+                        // TODO: won't crash but this makes me feel ugly
+                        if self.scroll_index > 0 {
+                            let window_start_index = current_start_index;
+                            let last_combatant_prev_page_idx = self.scroll_index - 1;
+                            if window_start_index <= last_combatant_prev_page_idx {
+                                // if so, scroll so we can see it
+                                self.scroll_index = (window_start_index + label_state.labels.len())
+                                    .saturating_sub(max_combatants(size));
+                            }
+                        }
+                    },
+                    KeyCode::Tab => {
+                        // tab = move label window forewards
+                        // advance window by its size so there are no overlaps
+                        // TODO: windows can overlap near the end of the initiative list. also, this
+                        // will likely crash. not tested yet
+                        current_start_index = (current_start_index + label_state.labels.len())
+                            .min(self.combatants.len() - label_state.labels.len());
+                        label_state.labels = make_label_window(current_start_index);
+
+                        // does the window end outside the visible range of combatants?
+                        let window_end_index = current_start_index + label_state.labels.len() - 1;
+                        let first_combatant_next_page_idx = self.scroll_index + max_combatants(size);
+                        if window_end_index >= first_combatant_next_page_idx {
+                            // if so, scroll so we can see it
+                            self.scroll_index = current_start_index;
+                        }
+                    },
                     KeyCode::Char(label) => {
-                        if label_state.labels.contains_left(&label) {
-                            if label_state.selected.contains(&label) {
-                                label_state.selected.remove(&label);
+                        if let Some(combatant) = label_state.labels.get_by_left(&label) {
+                            if label_state.selected_combatants.contains(combatant) {
+                                label_state.selected_combatants.remove(combatant);
                             } else {
-                                label_state.selected.insert(label);
+                                label_state.selected_combatants.insert(*combatant);
                             }
                         }
                     },
@@ -256,12 +297,9 @@ impl<B: Backend> Ui<B> {
             }
         }
 
-        let selected_combatants = label_state.selected
-            .iter()
-            .filter_map(|label| label_state.labels.get_by_left(label).copied())
-            .collect();
+        let selected_combatants = label_state.selected_combatants.clone();
 
-        if !label_state.selected.is_empty() {
+        if !label_state.selected_combatants.is_empty() {
             self.label_state = Some(label_state);
         }
 
@@ -285,6 +323,6 @@ impl<B: Backend> DerefMut for Ui<B> {
 
 impl<B: Backend> Widget for Ui<B> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        TrackerWidget::new(&self.tracker, self.start_index).render(area, buf);
+        TrackerWidget::new(&self.tracker, self.scroll_index).render(area, buf);
     }
 }

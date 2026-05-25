@@ -99,14 +99,14 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
     Table::new(
         widget.tracker.combatants.iter()
             .enumerate()
-            .skip(widget.start_index)
+            .skip(widget.scroll_index)
             .map(|(i, combatant)| {
                 let is_current_turn = i == widget.tracker.turn;
                 let (label, is_label_selected) = if let Some(label_state) = widget.label_state {
                     let label = label_state.labels.get_by_right(&i).copied();
                     (
                         label,
-                        label_state.selected.contains(&label.unwrap_or_default()),
+                        label_state.selected_combatants.contains(&i),
                     )
                 } else {
                     (None, false)
@@ -171,7 +171,7 @@ pub struct Tracker<'a> {
 
     /// Index of the first combatant listed in the tracker, used to scroll through the initiative
     /// tracker.
-    pub start_index: usize,
+    pub scroll_index: usize,
 
     /// State for label mode.
     pub label_state: Option<&'a LabelModeState>,
@@ -179,17 +179,17 @@ pub struct Tracker<'a> {
 
 impl<'a> Tracker<'a> {
     /// Create a new [`Tracker`] widget.
-    pub fn new(tracker: &'a CoreTracker, start_index: usize) -> Self {
-        Self { tracker, start_index, label_state: None }
+    pub fn new(tracker: &'a CoreTracker, scroll_index: usize) -> Self {
+        Self { tracker, scroll_index, label_state: None }
     }
 
     /// Create a new [`Tracker`] widget with the given labels.
     pub fn with_labels(
         tracker: &'a CoreTracker,
-        start_index: usize,
+        scroll_index: usize,
         label_state: &'a LabelModeState,
     ) -> Self {
-        Self { tracker, start_index, label_state: Some(label_state) }
+        Self { tracker, scroll_index, label_state: Some(label_state) }
     }
 }
 
