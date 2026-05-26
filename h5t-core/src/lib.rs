@@ -10,10 +10,11 @@ pub use ability::{Ability, score_to_modifier};
 pub use action::Action;
 pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use damage::{DamageKind, MagicKind};
+use enumset::EnumSet;
 pub use monster::Monster;
 use monster::Speed;
 use resource::{BonusAction, Reaction, Resource, ResourcePool};
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 /// Generic ID, identifying a resource or action.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -76,6 +77,27 @@ impl Combatant {
         }
     }
 
+    /// Returns the combatant's damage vulnerabilities.
+    pub fn damage_vulnerabilities(&self) -> &HashMap<DamageKind, EnumSet<MagicKind>> {
+        match &self.kind {
+            CombatantKind::Monster(monster) => &monster.damage_vulnerabilities,
+        }
+    }
+
+    /// Returns the combatant's damage resistances.
+    pub fn damage_resistances(&self) -> &HashMap<DamageKind, EnumSet<MagicKind>> {
+        match &self.kind {
+            CombatantKind::Monster(monster) => &monster.damage_resistances,
+        }
+    }
+
+    /// Returns the combatant's damage immunities.
+    pub fn damage_immunities(&self) -> &HashMap<DamageKind, EnumSet<MagicKind>> {
+        match &self.kind {
+            CombatantKind::Monster(monster) => &monster.damage_immunities,
+        }
+    }
+
     /// Returns the combatant's proficiency bonus.
     pub fn proficiency_bonus(&self) -> Modifier {
         match &self.kind {
@@ -90,10 +112,26 @@ impl Combatant {
         }
     }
 
-    /// Damage the combatant by the given amount.
+    /// Damage the combatant by the given amount, optionally taking its vulnerabilities,
+    /// resistances, and immunities into account.
     ///
     /// The amount will not saturate to 0, meaning the combatant can have negative hit points.
-    pub fn damage(&mut self, amount: i32) {
+    pub fn damage(&mut self, mut amount: i32, kind: Option<DamageKind>) {
+        if let Some(kind) = kind {
+            // TODO: does not check for magical / nonmagical, should be overridable by user
+            let is_immune = self.damage_immunities().contains_key(&kind);
+            if is_immune {
+                return;
+            }
+
+            let is_vulnerable = self.damage_vulnerabilities().contains_key(&kind);
+            let is_resistant = self.damage_resistances().contains_key(&kind);
+            match (is_vulnerable, is_resistant) {
+                (true, false) => amount *= 2,
+                (false, true) => amount /= 2,
+                _ => (), // cancel the effect(s)
+            }
+        }
         self.hit_points -= amount;
     }
 }

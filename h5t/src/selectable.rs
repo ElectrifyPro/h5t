@@ -1,4 +1,4 @@
-use h5t_core::ConditionKind;
+use h5t_core::{ConditionKind, DamageKind};
 use std::{fmt::Display, hash::Hash};
 
 /// Marker type for enums that can be used with [`Tracker::multi_select_enum`].
@@ -8,6 +8,28 @@ pub(crate) trait Selectable: Copy + Hash + Eq + Display {
 
     /// Returns the possible variants of the enum.
     fn variants() -> impl Iterator<Item = Self>;
+}
+
+impl Selectable for DamageKind {
+    const N: usize = 13;
+
+    fn variants() -> impl Iterator<Item = Self> {
+        [
+            DamageKind::Acid,
+            DamageKind::Bludgeoning,
+            DamageKind::Cold,
+            DamageKind::Fire,
+            DamageKind::Force,
+            DamageKind::Lightning,
+            DamageKind::Necrotic,
+            DamageKind::Piercing,
+            DamageKind::Poison,
+            DamageKind::Psychic,
+            DamageKind::Radiant,
+            DamageKind::Slashing,
+            DamageKind::Thunder,
+        ].into_iter()
+    }
 }
 
 impl Selectable for ConditionKind {

@@ -107,7 +107,7 @@ impl ApplyCondition {
             self.selected == Field::Conditions,
         ), conditions);
 
-        frame.render_widget(Select::new(
+        frame.render_widget(Select::with_selected(
             "For how long?",
             &self.unit,
             self.selected == Field::Duration,

@@ -12,16 +12,21 @@ pub struct Select<'a, T> {
     prompt: &'a str,
 
     /// The selected variant.
-    selected: &'a T,
+    selected: Option<&'a T>,
 
     /// Whether to render the widget in an active state.
     active: bool,
 }
 
 impl<'a, T> Select<'a, T> {
-    /// Create a new [`Select`] popup with all the required fields.
-    pub fn new(prompt: &'a str, selected: &'a T, active: bool) -> Self {
+    /// Create a new [`Select`] popup with our without a field preselected.
+    pub fn new(prompt: &'a str, selected: Option<&'a T>, active: bool) -> Self {
         Self { prompt, selected, active }
+    }
+
+    /// Create a new [`Select`] popup with a field preselected.
+    pub fn with_selected(prompt: &'a str, selected: &'a T, active: bool) -> Self {
+        Self { prompt, selected: Some(selected), active }
     }
 }
 
@@ -47,7 +52,7 @@ impl<T: Selectable> Widget for Select<'_, T> {
                     let mut style = Style::default()
                         .fg(theme.foreground.into());
 
-                    if *self.selected == option {
+                    if let Some(selected) = self.selected && *selected == option {
                         style = style.bold().bg(theme.select.into());
                     }
 
