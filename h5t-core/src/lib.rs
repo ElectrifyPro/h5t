@@ -1,6 +1,7 @@
 pub mod ability;
 pub mod action;
 pub mod condition;
+pub mod damage;
 pub mod monster;
 pub mod resource;
 
@@ -8,6 +9,7 @@ use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
 pub use action::Action;
 pub use condition::{Condition, ConditionKind, ConditionDuration};
+pub use damage::{DamageKind, MagicKind};
 pub use monster::Monster;
 use monster::Speed;
 use resource::{BonusAction, Reaction, Resource, ResourcePool};

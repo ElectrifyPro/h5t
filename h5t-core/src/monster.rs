@@ -1,5 +1,14 @@
-use crate::{ability::{Modifier, Score, Skill}, Ability, Action};
+use crate::{
+    ability::{Modifier, Score, Skill},
+    damage::deserialize_damage_kinds,
+    Ability,
+    Action,
+    DamageKind,
+    MagicKind,
+};
+use enumset::EnumSet;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::collections::HashMap;
 
 /// The source of a monster's armor class value.
 #[derive(Clone, Debug, Default, Serialize)]
@@ -308,6 +317,21 @@ pub struct Monster {
 
     /// The expression to roll for the monster's hit points.
     pub hit_points_roll: String,
+
+    /// Types of damage the monster is vulnerable to. Damage dealt to the monster of any of these
+    /// types will be doubled.
+    #[serde(deserialize_with = "deserialize_damage_kinds")]
+    pub damage_vulnerabilities: HashMap<DamageKind, EnumSet<MagicKind>>,
+
+    /// Types of damage the monster is resistant to. Damage dealt to the monster of any of these
+    /// types will be halved (rounded down).
+    #[serde(deserialize_with = "deserialize_damage_kinds")]
+    pub damage_resistances: HashMap<DamageKind, EnumSet<MagicKind>>,
+
+    /// Types of damage the monster is immune to. Damage dealt to the monster of any of these types
+    /// will be entirely negated.
+    #[serde(deserialize_with = "deserialize_damage_kinds")]
+    pub damage_immunities: HashMap<DamageKind, EnumSet<MagicKind>>,
 
     /// The different speeds the monster has, such as walking, flying, or swimming.
     pub speed: Speed,
