@@ -1,5 +1,13 @@
 use crate::{
-    resource::{Action as ActionRes, BonusAction, Cost, Reaction, Resource, ResourcePool},
+    resource::{
+        Action as ActionRes,
+        BonusAction,
+        Cost,
+        Reaction,
+        Resource,
+        ResourcePool,
+        SpeedMultiplier,
+    },
     Id,
 };
 
@@ -63,7 +71,7 @@ Any increase or decrease to your speed changes this additional movement by the s
                     },
                 ],
                 on_trigger: vec![
-                    // TODO:
+                    Effect::GrantResource(SpeedMultiplier::ID, 1),
                 ],
             },
             Action {

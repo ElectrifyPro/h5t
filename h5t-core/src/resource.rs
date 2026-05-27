@@ -45,6 +45,7 @@ impl Default for ResourcePool {
     fn default() -> Self {
         Self(HashMap::from([
             (MovementUsed::ID, 0),
+            (SpeedMultiplier::ID, 1),
             (Action::ID, 1),
             (BonusAction::ID, 1),
             (Reaction::ID, 1),
@@ -70,6 +71,15 @@ pub struct MovementUsed;
 
 impl Resource for MovementUsed {
     const ID: Id = Id(Cow::Borrowed("movement-used"));
+}
+
+/// The amount to multiply the creature's base speed by. When a creature uses `Dash` or a similar
+/// action, this value increases by 1. The total amount of movement the creature can then use is
+/// equal to its base speed, multiplied by this value.
+pub struct SpeedMultiplier;
+
+impl Resource for SpeedMultiplier {
+    const ID: Id = Id(Cow::Borrowed("speed-multiplier"));
 }
 
 /// Number of actions, used for attacks, casting various spells, helping, etc.

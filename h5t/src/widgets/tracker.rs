@@ -7,6 +7,7 @@ use h5t_core::{
         Reaction,
         Resource,
         ResourcePool,
+        SpeedMultiplier,
     },
     Combatant,
     Tracker as CoreTracker,
@@ -19,10 +20,13 @@ fn movement_speed(combatant: &Combatant) -> Line<'static> {
     let base_speed = combatant.speed();
     let movement_used = MovementUsed::get(&combatant.resource_pool);
 
+    // used to account for dashing
+    let speed_multiplier = SpeedMultiplier::get(&combatant.resource_pool);
+
     // create a `Span` for each speed value
     let make_span = |prefix: &str, speed: Option<i32>| {
         speed
-            .map(|speed| speed - movement_used)
+            .map(|speed| speed_multiplier * speed - movement_used)
             .filter(|speed| *speed > 0)
             .map(|speed| Span::from(format!("{} {} ft.", prefix, speed)))
     };
