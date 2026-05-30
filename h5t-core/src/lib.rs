@@ -1,19 +1,23 @@
 pub mod ability;
 pub mod action;
+pub mod class;
 pub mod condition;
 pub mod damage;
 pub mod monster;
 pub mod resource;
+pub mod spell;
 
 use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
 pub use action::Action;
+pub use class::ClassKind;
 pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use damage::{DamageKind, MagicKind};
 use enumset::EnumSet;
 pub use monster::Monster;
 use monster::Speed;
 use resource::{BonusAction, Reaction, Resource, ResourcePool};
+pub use spell::Spell;
 use std::{borrow::Cow, collections::HashMap};
 
 /// Generic ID, identifying a resource or action.
