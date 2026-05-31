@@ -52,69 +52,37 @@ impl From<CombatantKind> for Combatant {
     }
 }
 
+/// Makes trivial `impl`s of common getter functions on [`Combatants`].
+macro_rules! combatant_impls {
+    ($($doc:literal, $fn_name:ident, |$in:ident| $out:expr, $return_type:ty);+ $(;)?) => {
+        $(
+            #[doc = $doc]
+            pub fn $fn_name(&self) -> $return_type {
+                match &self.kind {
+                    CombatantKind::Monster($in) => $out,
+                }
+            }
+        )+
+    }
+}
+
 impl Combatant {
-    /// Returns the combatant's name.
-    pub fn name(&self) -> &str {
-        match &self.kind {
-            CombatantKind::Monster(monster) => &monster.name,
-        }
-    }
-
-    /// Returns the combatant's main armor class.
-    pub fn armor_class(&self) -> u32 {
-        match &self.kind {
-            CombatantKind::Monster(monster) => monster.armor_class.value,
-        }
-    }
-
-    /// Returns the combatant's base speed.
-    pub fn speed(&self) -> &Speed {
-        match &self.kind {
-            CombatantKind::Monster(monster) => &monster.speed,
-        }
-    }
-
-    /// Returns the combatant's maximum hit points.
-    pub fn max_hit_points(&self) -> i32 {
-        match &self.kind {
-            CombatantKind::Monster(monster) => monster.hit_points,
-        }
-    }
-
-    /// Returns the combatant's damage vulnerabilities.
-    pub fn damage_vulnerabilities(&self) -> &HashMap<DamageKind, EnumSet<MagicKind>> {
-        match &self.kind {
-            CombatantKind::Monster(monster) => &monster.damage_vulnerabilities,
-        }
-    }
-
-    /// Returns the combatant's damage resistances.
-    pub fn damage_resistances(&self) -> &HashMap<DamageKind, EnumSet<MagicKind>> {
-        match &self.kind {
-            CombatantKind::Monster(monster) => &monster.damage_resistances,
-        }
-    }
-
-    /// Returns the combatant's damage immunities.
-    pub fn damage_immunities(&self) -> &HashMap<DamageKind, EnumSet<MagicKind>> {
-        match &self.kind {
-            CombatantKind::Monster(monster) => &monster.damage_immunities,
-        }
-    }
-
-    /// Returns the combatant's proficiency bonus.
-    pub fn proficiency_bonus(&self) -> Modifier {
-        match &self.kind {
-            CombatantKind::Monster(monster) => monster.proficiency_bonus,
-        }
-    }
-
-    /// Returns the actions, bonus actions, reactions, and legendary actions the creature can take.
-    pub fn actions(&self) -> Vec<Action> {
-        match &self.kind {
-            CombatantKind::Monster(monster) => monster.actions(),
-        }
-    }
+    combatant_impls!(
+        "Returns the combatant's name.", name, |c| &c.name, &str;
+        "Returns the combatant's main armor class.", armor_class, |c| c.armor_class.value, u32;
+        "Returns the combatant's main base speed.", speed, |c| &c.speed, &Speed;
+        "Returns the combatant's maximum hit points.", max_hit_points, |c| c.hit_points, i32;
+        "Returns the combatant's damage vulnerabilities.",
+        damage_vulnerabilities, |c| &c.damage_vulnerabilities, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's damage resistances.",
+        damage_resistances, |c| &c.damage_resistances, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's damage immunities.",
+        damage_immunities, |c| &c.damage_immunities, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's proficiency bonus.",
+        proficiency_bonus, |c| c.proficiency_bonus, Modifier;
+        "Returns the actions, bonus actions, reactions, and legendary actions the creature can take.",
+        actions, |c| c.actions(), Vec<Action>;
+    );
 
     /// Damage the combatant by the given amount, optionally taking its vulnerabilities,
     /// resistances, and immunities into account.
