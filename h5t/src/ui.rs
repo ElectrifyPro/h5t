@@ -5,7 +5,7 @@ use crate::{
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
 use crossterm::event::{read, Event, KeyCode};
-use h5t_core::{CombatantKind, Tracker};
+use h5t_core::Tracker;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
 use std::{collections::HashSet, ops::{Deref, DerefMut}};
 
@@ -192,8 +192,7 @@ impl<B: Backend> Ui<B> {
             let combatant = self.tracker.current_combatant();
             if self.info_block == InfoBlock::StatBlock {
                 // show stat block in place of the combatant card
-                let CombatantKind::Monster(monster) = &combatant.kind;
-                frame.render_widget(StatBlock::new(monster), info_area);
+                frame.render_widget(StatBlock::new(&combatant.kind), info_area);
             } else {
                 // show combatant card
                 frame.render_widget(CombatantBlock::new(combatant), info_area);

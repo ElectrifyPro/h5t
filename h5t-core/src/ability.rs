@@ -20,11 +20,22 @@ pub fn score_to_modifier(score: Score) -> Modifier {
 /// numerical values related to abilities, depending on the parameter chosen for the type `T`.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Ability<T> {
+    /// Natural athleticism, bodily power, and physical might.
     pub strength: T,
+
+    /// Physical agility, reflexes, and balance.
     pub dexterity: T,
+
+    /// Health, stamina, and endurance.
     pub constitution: T,
+
+    /// Reasoning, memory, and mental acuity.
     pub intelligence: T,
+
+    /// Awareness, intuition, insight, and mental fortitude.
     pub wisdom: T,
+
+    /// Confidence, eloquence, leadership, and charm.
     pub charisma: T,
 }
 
@@ -98,6 +109,28 @@ pub struct Skill<T> {
 
     /// Survival (Wisdom).
     pub survival: T,
+}
+
+/// A creature's proficiencies.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Proficiencies {
+    /// The creature's skill proficiencies.
+    ///
+    /// If the creature has proficiency in a skill, its modifier will be `Some`, and will contain
+    /// its proficiency bonus plus its ability modifier for the relevant ability score. Otherwise,
+    /// the value will be `None`, and the creature will use the ability modifier alone to calculate
+    /// the skill check.
+    #[serde(default)]
+    pub skills: Skill<Option<Modifier>>,
+
+    /// The creature's saving throw proficiencies.
+    ///
+    /// If the creature has proficiency in a saving throw, its modifier will be `Some`, and will
+    /// contain its proficiency bonus plus its ability modifier for the relevant ability score.
+    /// Otherwise, the value will be `None`, and the creature will use the ability modifier alone to
+    /// calculate the saving throw.
+    #[serde(default)]
+    pub saving_throws: Ability<Option<Modifier>>,
 }
 
 #[cfg(test)]

@@ -1,17 +1,19 @@
 use crate::{
-    ability::{Modifier, Score, Skill},
+    ability::{Modifier, Proficiencies, Score},
+    character::level_to_proficiency,
     damage::deserialize_damage_kinds,
     Ability,
     Action,
     DamageKind,
     MagicKind,
+    Speed,
 };
 use enumset::EnumSet;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 
 /// The source of a monster's armor class value.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub enum ArmorClassSource {
     /// The armor class is calculated from the monster's Dexterity modifier (i.e., 10 + DEX mod).
     #[default]
@@ -25,7 +27,7 @@ pub enum ArmorClassSource {
 }
 
 /// A monster's armor class.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ArmorClass {
     /// The source of the armor class value.
     pub source: ArmorClassSource,
@@ -63,46 +65,6 @@ where D: Deserializer<'de>
         .ok_or_else(|| serde::de::Error::custom("invalid armor class data"))
 }
 
-/// A creature's speed (in feet) on all types of movement.
-///
-/// Each field is given as a descriptive string, such as "30 ft.".
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct Speed {
-    /// Basic movement speed.
-    #[serde(default, deserialize_with = "deserialize_inner_speed")]
-    pub walk: Option<i32>,
-
-    /// Movement speed when moving through sand, earth, mud, or ice.
-    #[serde(default, deserialize_with = "deserialize_inner_speed")]
-    pub burrow: Option<i32>,
-
-    /// Movement speed when climbing.
-    #[serde(default, deserialize_with = "deserialize_inner_speed")]
-    pub climb: Option<i32>,
-
-    /// Movement speed when flying.
-    #[serde(default, deserialize_with = "deserialize_inner_speed")]
-    pub fly: Option<i32>,
-
-    /// Movement speed when swimming.
-    #[serde(default, deserialize_with = "deserialize_inner_speed")]
-    pub swim: Option<i32>,
-}
-
-fn deserialize_inner_speed<'de, D>(d: D) -> Result<Option<i32>, D::Error>
-where D: Deserializer<'de>
-{
-    // api provides speed as: {"walk":"10 ft.","swim":"40 ft."}
-    //
-    // pretty easy to get what we want
-    let result = String::deserialize(d)?
-        .split(' ')
-        .next()
-        .map(|s| s.parse().ok())
-        .flatten();
-    Ok(result)
-}
-
 /// A creature's size.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum Size {
@@ -137,28 +99,6 @@ pub enum Type {
     #[default]
     #[serde(other)] // TODO: capture the value of the "other" case
     Other,
-}
-
-/// A monster's proficiencies.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct Proficiencies {
-    /// The monster's skill proficiencies.
-    ///
-    /// If the monster has proficiency in a skill, its modifier will be `Some`, and will contain
-    /// its proficiency bonus plus its ability modifier for the relevant ability score. Otherwise,
-    /// the value will be `None`, and the monster will use the ability modifier alone to calculate
-    /// the skill check.
-    #[serde(default)]
-    pub skills: Skill<Option<Modifier>>,
-
-    /// The monster's saving throw proficiencies.
-    ///
-    /// If the monster has proficiency in a saving throw, its modifier will be `Some`, and will
-    /// contain its proficiency bonus plus its ability modifier for the relevant ability score.
-    /// Otherwise, the value will be `None`, and the monster will use the ability modifier alone to
-    /// calculate the saving throw.
-    #[serde(default)]
-    pub saving_throws: Ability<Option<Modifier>>,
 }
 
 fn deserialize_proficiencies<'de, D>(d: D) -> Result<Proficiencies, D::Error>
@@ -312,7 +252,7 @@ pub struct Monster {
     #[serde(deserialize_with = "deserialize_armor_class")]
     pub armor_class: ArmorClass,
 
-    /// The monster's hit points.
+    /// The monster's base hit points.
     pub hit_points: i32,
 
     /// The expression to roll for the monster's hit points.
@@ -336,7 +276,7 @@ pub struct Monster {
     /// The different speeds the monster has, such as walking, flying, or swimming.
     pub speed: Speed,
 
-    // The monster's proficiencies, including its skill and saving throw proficiencies.
+    /// The monster's proficiencies, including its skill and saving throw proficiencies.
     #[serde(default, deserialize_with = "deserialize_proficiencies")]
     pub proficiencies: Proficiencies,
 
@@ -348,9 +288,6 @@ pub struct Monster {
     /// of XP the party gains for defeating the monster.
     pub xp: i32,
 
-    /// The monster's proficiency bonus, used for calculating attack bonuses and saving throw DCs.
-    pub proficiency_bonus: Modifier,
-
     /// The monster's traits that provide it with various benefits or drawbacks. This includes
     /// things like Legendary Resistances, Lair Actions, etc.
     #[serde(rename = "special_abilities")]
@@ -361,5 +298,10 @@ impl Monster {
     /// Returns the actions, bonus actions, reactions, and legendary actions the creature can take.
     pub fn actions(&self) -> Vec<Action> {
         Action::standard_actions()
+    }
+
+    /// Returns the monster's proficiency bonus based on their challenge rating.
+    pub fn proficiency_bonus(&self) -> Modifier {
+        level_to_proficiency(self.challenge_rating as u8)
     }
 }

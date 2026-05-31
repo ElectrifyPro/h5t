@@ -1,22 +1,25 @@
 pub mod ability;
 pub mod action;
+pub mod character;
 pub mod class;
 pub mod condition;
 pub mod damage;
 pub mod monster;
 pub mod resource;
+pub mod speed;
 pub mod spell;
 
 use ability::Modifier;
 pub use ability::{Ability, score_to_modifier};
 pub use action::Action;
+pub use character::Character;
 pub use class::ClassKind;
 pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use damage::{DamageKind, MagicKind};
 use enumset::EnumSet;
 pub use monster::Monster;
-use monster::Speed;
 use resource::{BonusAction, Reaction, Resource, ResourcePool};
+pub use speed::Speed;
 pub use spell::Spell;
 use std::{borrow::Cow, collections::HashMap};
 
@@ -29,7 +32,7 @@ pub struct Id(Cow<'static, str>);
 /// Combatants can include player characters, monsters, NPCs, etc.
 #[derive(Debug)]
 pub struct Combatant {
-    /// The kind of combatant.
+    /// The kind of creature the combatant is.
     pub kind: CombatantKind,
 
     /// The combatant's conditions.
@@ -47,20 +50,19 @@ pub struct Combatant {
 impl From<CombatantKind> for Combatant {
     fn from(kind: CombatantKind) -> Self {
         match kind {
+            CombatantKind::Character(character) => character.into(),
             CombatantKind::Monster(monster) => monster.into(),
         }
     }
 }
 
-/// Makes trivial `impl`s of common getter functions on [`Combatants`].
+/// Makes trivial `impl`s of common getter functions on [`Combatant`]s.
 macro_rules! combatant_impls {
-    ($($doc:literal, $fn_name:ident, |$in:ident| $out:expr, $return_type:ty);+ $(;)?) => {
+    ($($doc:literal, $fn_name:ident, $return_type:ty);+ $(;)?) => {
         $(
             #[doc = $doc]
             pub fn $fn_name(&self) -> $return_type {
-                match &self.kind {
-                    CombatantKind::Monster($in) => $out,
-                }
+                self.kind.$fn_name()
             }
         )+
     }
@@ -68,20 +70,19 @@ macro_rules! combatant_impls {
 
 impl Combatant {
     combatant_impls!(
-        "Returns the combatant's name.", name, |c| &c.name, &str;
-        "Returns the combatant's main armor class.", armor_class, |c| c.armor_class.value, u32;
-        "Returns the combatant's main base speed.", speed, |c| &c.speed, &Speed;
-        "Returns the combatant's maximum hit points.", max_hit_points, |c| c.hit_points, i32;
+        "Returns the combatant's name.", name, &str;
+        "Returns the combatant's main armor class.", armor_class, u32;
+        "Returns the combatant's main base speed.", speed, &Speed;
+        "Returns the combatant's maximum hit points.", max_hit_points, i32;
         "Returns the combatant's damage vulnerabilities.",
-        damage_vulnerabilities, |c| &c.damage_vulnerabilities, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        damage_vulnerabilities, &HashMap<DamageKind, EnumSet<MagicKind>>;
         "Returns the combatant's damage resistances.",
-        damage_resistances, |c| &c.damage_resistances, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        damage_resistances, &HashMap<DamageKind, EnumSet<MagicKind>>;
         "Returns the combatant's damage immunities.",
-        damage_immunities, |c| &c.damage_immunities, &HashMap<DamageKind, EnumSet<MagicKind>>;
-        "Returns the combatant's proficiency bonus.",
-        proficiency_bonus, |c| c.proficiency_bonus, Modifier;
+        damage_immunities, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's proficiency bonus.", proficiency_bonus, Modifier;
         "Returns the actions, bonus actions, reactions, and legendary actions the creature can take.",
-        actions, |c| c.actions(), Vec<Action>;
+        actions, Vec<Action>;
     );
 
     /// Damage the combatant by the given amount, optionally taking its vulnerabilities,
@@ -108,11 +109,31 @@ impl Combatant {
     }
 }
 
-/// A kind of combatant.
+/// The kind of creature the combatant is.
 #[derive(Debug)]
 pub enum CombatantKind {
+    /// A player-controlled character.
+    Character(Character),
+
     /// Pre-made monster.
     Monster(Monster),
+}
+
+impl From<Character> for CombatantKind {
+    fn from(character: Character) -> Self {
+        Self::Character(character)
+    }
+}
+
+impl From<Character> for Combatant {
+    fn from(character: Character) -> Self {
+        Self {
+            hit_points: character.hit_points,
+            conditions: Vec::new(),
+            kind: character.into(),
+            resource_pool: ResourcePool::default(),
+        }
+    }
 }
 
 impl From<Monster> for CombatantKind {
@@ -130,6 +151,40 @@ impl From<Monster> for Combatant {
             resource_pool: ResourcePool::default(),
         }
     }
+}
+
+/// Makes trivial `impl`s of common getter functions on [`CombatantKind`]s.
+macro_rules! combatant_kind_impls {
+    ($($doc:literal, $fn_name:ident, |$in:ident| $out:expr, $return_type:ty);+ $(;)?) => {
+        $(
+            #[doc = $doc]
+            pub fn $fn_name(&self) -> $return_type {
+                match &self {
+                    CombatantKind::Character($in) => $out,
+                    CombatantKind::Monster($in) => $out,
+                }
+            }
+        )+
+    }
+}
+
+impl CombatantKind {
+    combatant_kind_impls!(
+        "Returns the combatant's name.", name, |c| &c.name, &str;
+        "Returns the combatant's main armor class.", armor_class, |c| c.armor_class.value, u32;
+        "Returns the combatant's main base speed.", speed, |c| &c.speed, &Speed;
+        "Returns the combatant's maximum hit points.", max_hit_points, |c| c.hit_points, i32;
+        "Returns the combatant's damage vulnerabilities.",
+        damage_vulnerabilities, |c| &c.damage_vulnerabilities, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's damage resistances.",
+        damage_resistances, |c| &c.damage_resistances, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's damage immunities.",
+        damage_immunities, |c| &c.damage_immunities, &HashMap<DamageKind, EnumSet<MagicKind>>;
+        "Returns the combatant's proficiency bonus.",
+        proficiency_bonus, |c| c.proficiency_bonus(), Modifier;
+        "Returns the actions, bonus actions, reactions, and legendary actions the creature can take.",
+        actions, |c| c.actions(), Vec<Action>;
+    );
 }
 
 /// The core initiative tracker.

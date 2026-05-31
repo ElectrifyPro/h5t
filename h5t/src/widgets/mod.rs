@@ -15,7 +15,7 @@ pub use tracker::Tracker;
 
 pub(crate) use tracker::max_combatants;
 
-use h5t_core::monster::Speed;
+use h5t_core::Speed;
 
 /// Formats a speed value.
 ///

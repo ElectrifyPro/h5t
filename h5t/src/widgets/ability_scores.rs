@@ -2,7 +2,7 @@ use crate::theme::THEME;
 use h5t_core::{
     ability::{Modifier as AbilityModifier, Score},
     Ability,
-    Combatant,
+    Character,
     CombatantKind,
     Monster,
     score_to_modifier,
@@ -23,10 +23,20 @@ pub struct AbilityScores {
 }
 
 impl AbilityScores {
-    /// Create a new [`AbilityScores`] widget from a [`Combatant`].
-    pub fn new(combatant: &Combatant) -> Self {
-        match &combatant.kind {
+    /// Create a new [`AbilityScores`] widget from a [`CombatantKind`].
+    pub fn new(creature: &CombatantKind) -> Self {
+        match &creature {
+            CombatantKind::Character(character) => Self::from(character),
             CombatantKind::Monster(monster) => Self::from(monster),
+        }
+    }
+}
+
+impl From<&Character> for AbilityScores {
+    fn from(character: &Character) -> Self {
+        Self {
+            scores: character.scores,
+            proficiencies: character.proficiencies.saving_throws,
         }
     }
 }

@@ -87,6 +87,6 @@ impl Widget for CombatantBlock<'_> {
         basic_status_text(self.combatant).render(name, buf);
         Widget::render(basic_stats_table(self.combatant), basic_stats, buf);
         FullConditions::new(self.combatant).render(conditions, buf);
-        AbilityScores::new(self.combatant).render(ability_scores, buf);
+        AbilityScores::new(&self.combatant.kind).render(ability_scores, buf);
     }
 }

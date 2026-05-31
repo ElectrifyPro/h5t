@@ -1,8 +1,8 @@
 use crate::{theme::THEME, widgets::{AbilityScores, fmt_speed}};
-use h5t_core::{monster::{Size, Type, Usage}, Monster};
+use h5t_core::{monster::{Size, Type, Usage}, CombatantKind, Monster};
 use ratatui::{prelude::*, widgets::*};
 
-/// Creates a [`Paragraph`] widget for displaying the monster's name and type.
+/// Creates a [`Paragraph`] widget for displaying the [`Monster`]'s name and type.
 fn name_and_type_paragraph(monster: &Monster) -> Paragraph<'_> {
     let size = match monster.size {
         Size::Tiny => "Tiny",
@@ -49,8 +49,8 @@ fn name_and_type_paragraph(monster: &Monster) -> Paragraph<'_> {
         .fg(THEME.foreground)
 }
 
-/// Creates a [`Table`] widget for displaying a monster's basic statistics.
-fn basic_stats_table(monster: &Monster) -> Table<'_> {
+/// Creates a [`Table`] widget for displaying a creature's basic statistics.
+fn basic_stats_table(creature: &CombatantKind) -> Table<'_> {
     /// Formats a challenge rating.
     fn fmt_cr(cr: f32, xp: i32) -> String {
         let cr_value = if cr == 0.0 {
@@ -68,23 +68,36 @@ fn basic_stats_table(monster: &Monster) -> Table<'_> {
         vec![
             Row::new(vec![
                 Text::styled("Armor Class", Modifier::BOLD),
-                Text::raw(monster.armor_class.value.to_string()),
+                Text::raw(creature.armor_class().to_string()),
             ]),
             Row::new(vec![
                 Text::styled("Hit Points", Modifier::BOLD),
-                Text::raw(format!("{} ({})", monster.hit_points, monster.hit_points_roll)),
+                match creature {
+                    CombatantKind::Character(character) => {
+                        Text::raw(format!("{}", character.hit_points))
+                    },
+                    CombatantKind::Monster(monster) => {
+                        Text::raw(format!("{} ({})", monster.hit_points, monster.hit_points_roll))
+                    },
+                }
             ]),
             Row::new(vec![
                 Text::styled("Speed", Modifier::BOLD),
-                Text::raw(fmt_speed(&monster.speed)),
+                Text::raw(fmt_speed(&creature.speed())),
             ]),
-            Row::new(vec![
-                Text::styled("Challenge", Modifier::BOLD),
-                Text::raw(fmt_cr(monster.challenge_rating, monster.xp)),
-            ]),
+            match creature {
+                CombatantKind::Character(character) => Row::new(vec![
+                    Text::styled("Level", Modifier::BOLD),
+                    Text::raw(format!("{}", character.level)),
+                ]),
+                CombatantKind::Monster(monster) => Row::new(vec![
+                    Text::styled("Challenge", Modifier::BOLD),
+                    Text::raw(fmt_cr(monster.challenge_rating, monster.xp)),
+                ]),
+            },
             Row::new(vec![
                 Text::styled("Proficiency Bonus", Modifier::BOLD),
-                Text::raw(format!("{:+}", monster.proficiency_bonus)),
+                Text::raw(format!("{:+}", creature.proficiency_bonus())),
             ]),
         ],
         vec![
@@ -95,7 +108,7 @@ fn basic_stats_table(monster: &Monster) -> Table<'_> {
         .fg(THEME.foreground)
 }
 
-/// Creates a [`Paragraph`] widget for displaying a monster's traits.
+/// Creates a [`Paragraph`] widget for displaying a [`Monster`]'s traits.
 fn traits_paragraph(monster: &Monster) -> Paragraph<'_> {
     use itertools::Itertools;
 
@@ -125,14 +138,14 @@ fn traits_paragraph(monster: &Monster) -> Paragraph<'_> {
 /// A widget for displaying a monster's stat block.
 #[derive(Debug)]
 pub struct StatBlock<'a> {
-    /// The monster to display.
-    pub monster: &'a Monster,
+    /// The creature to display.
+    pub creature: &'a CombatantKind,
 }
 
 impl<'a> StatBlock<'a> {
     /// Create a new [`StatBlock`] widget.
-    pub fn new(monster: &'a Monster) -> Self {
-        Self { monster }
+    pub fn new(creature: &'a CombatantKind) -> Self {
+        Self { creature }
     }
 }
 
@@ -161,9 +174,18 @@ impl Widget for StatBlock<'_> {
             .spacing(1)
             .areas(area);
 
-        name_and_type_paragraph(self.monster).render(name, buf);
-        Widget::render(basic_stats_table(self.monster), basic_stats, buf);
-        AbilityScores::from(self.monster).render(ability_scores, buf);
-        traits_paragraph(self.monster).render(traits, buf);
+        match self.creature {
+            CombatantKind::Character(character) => {
+                Span::styled(&character.name, Modifier::BOLD).render(name, buf);
+            },
+            CombatantKind::Monster(monster) => {
+                name_and_type_paragraph(monster).render(name, buf);
+            },
+        }
+        Widget::render(basic_stats_table(self.creature), basic_stats, buf);
+        AbilityScores::new(self.creature).render(ability_scores, buf);
+        if let CombatantKind::Monster(monster) = self.creature {
+            traits_paragraph(monster).render(traits, buf);
+        }
     }
 }
