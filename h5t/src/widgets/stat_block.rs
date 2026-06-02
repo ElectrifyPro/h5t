@@ -176,7 +176,9 @@ impl Widget for StatBlock<'_> {
 
         match self.creature {
             CombatantKind::Character(character) => {
-                Span::styled(&character.name, Modifier::BOLD).render(name, buf);
+                Span::styled(&character.name, Modifier::BOLD)
+                    .fg(THEME.foreground)
+                    .render(name, buf);
             },
             CombatantKind::Monster(monster) => {
                 name_and_type_paragraph(monster).render(name, buf);
