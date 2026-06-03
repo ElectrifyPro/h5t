@@ -1,7 +1,7 @@
 use crate::{
     input::{AfterKey as AfterKeyInput, Charset, GetInput},
     selectable::Selectable,
-    ui::LABELS,
+    view::battle::LABELS,
     widgets::popup::{popup_area, Multiselect, Select},
     Tracker,
 };

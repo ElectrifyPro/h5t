@@ -1,4 +1,4 @@
-use crate::{selectable::Selectable, theme::THEME, ui::LABELS, widgets::popup::Popup};
+use crate::{selectable::Selectable, theme::THEME, view::battle::LABELS, widgets::popup::Popup};
 use ratatui::{prelude::*, widgets::*};
 use std::collections::HashSet;
 

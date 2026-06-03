@@ -47,8 +47,10 @@ pub struct LabelModeState {
     pub selected_combatants: HashSet<usize>,
 }
 
-/// A wrapper around a [`Tracker`] that handles UI-dependent logic, such as label mode.
-pub struct Ui<B: Backend> {
+/// The battle view, used in combat or when strict initiative order is needed.
+///
+/// The underlying [`Tracker`] is used for rules management.
+pub struct Battle<B: Backend> {
     /// The terminal to draw to.
     pub terminal: Terminal<B>,
 
@@ -70,14 +72,14 @@ pub struct Ui<B: Backend> {
     label_state: Option<LabelModeState>,
 }
 
-impl<B: Backend> Drop for Ui<B> {
+impl<B: Backend> Drop for Battle<B> {
     fn drop(&mut self) {
         ratatui::restore();
     }
 }
 
-impl<B: Backend> Ui<B> {
-    /// Wrap a [`Tracker`] in a new [`UiTracker`].
+impl<B: Backend> Battle<B> {
+    /// Wrap a [`Tracker`] in a new [`Battle`].
     pub fn new(terminal: Terminal<B>, tracker: Tracker) -> Self {
         Self {
             terminal,
@@ -306,7 +308,7 @@ impl<B: Backend> Ui<B> {
     }
 }
 
-impl<B: Backend> Deref for Ui<B> {
+impl<B: Backend> Deref for Battle<B> {
     type Target = Tracker;
 
     fn deref(&self) -> &Self::Target {
@@ -314,13 +316,13 @@ impl<B: Backend> Deref for Ui<B> {
     }
 }
 
-impl<B: Backend> DerefMut for Ui<B> {
+impl<B: Backend> DerefMut for Battle<B> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.tracker
     }
 }
 
-impl<B: Backend> Widget for Ui<B> {
+impl<B: Backend> Widget for Battle<B> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         TrackerWidget::new(&self.tracker, self.scroll_index).render(area, buf);
     }

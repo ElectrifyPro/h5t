@@ -1,4 +1,4 @@
-use crate::{theme::THEME, ui::LabelModeState, widgets::{CompactConditions, HitPoints}};
+use crate::{theme::THEME, view::battle::LabelModeState, widgets::{CompactConditions, HitPoints}};
 use h5t_core::{
     resource::{
         Action,

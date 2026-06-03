@@ -2,11 +2,11 @@ mod input;
 mod selectable;
 mod state;
 mod theme;
-mod ui;
+mod view;
 mod widgets;
 
 use h5t_core::{CombatantKind, Monster, Spell, Tracker};
-use ui::Ui;
+use view::battle::Battle;
 
 fn main() {
     // NOTE: monster and spell JSON data provided courtesy of https://www.dnd5eapi.co/
@@ -73,7 +73,7 @@ fn main() {
     ];
     combatants.splice(0..0, pcs);
 
-    let mut tracker = Ui::new(
+    let mut tracker = Battle::new(
         ratatui::init(),
         Tracker::new(combatants),
     );
