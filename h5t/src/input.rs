@@ -194,6 +194,11 @@ impl<T: FromStr> GetInput<T> {
         }
     }
 
+    /// Retrieve the inputted string.
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+
     /// Retrieve the parsed value.
     pub fn get_parsed(&self) -> Result<T, T::Err> {
         T::from_str(&self.value)

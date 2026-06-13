@@ -1,22 +1,21 @@
 mod input;
 mod selectable;
-mod state;
 mod theme;
 mod view;
 mod widgets;
 
-use h5t_core::{CombatantKind, Monster, Spell, Tracker};
+use h5t_core::{monster::MONSTERS, CombatantKind, Spell, Tracker};
 use view::battle::Battle;
+use view::setup::Setup;
 
 fn main() {
-    // NOTE: monster and spell JSON data provided courtesy of https://www.dnd5eapi.co/
-    let file = std::fs::File::open("data/monsters.json").unwrap();
-    let monsters = serde_json::from_reader::<_, Vec<Monster>>(file).unwrap();
+    // NOTE: spell JSON data provided courtesy of https://www.dnd5eapi.co/
     let file = std::fs::File::open("data/spells.json").unwrap();
     let spells = serde_json::from_reader::<_, Vec<Spell>>(file).unwrap();
 
-    let mut combatants = monsters
-        .into_iter()
+    let mut combatants = MONSTERS
+        .iter()
+        .cloned()
         .map(|m| CombatantKind::Monster(m).into())
         .collect::<Vec<_>>();
 
@@ -73,10 +72,16 @@ fn main() {
     ];
     combatants.splice(0..0, pcs);
 
+    let mut setup = Setup::new(
+        ratatui::init(),
+    );
+    setup.run();
+
+    // TODO: move setup combatants to tracker
+
     let mut tracker = Battle::new(
         ratatui::init(),
         Tracker::new(combatants),
     );
-
     tracker.run();
 }

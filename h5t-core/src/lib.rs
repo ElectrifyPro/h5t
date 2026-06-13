@@ -9,7 +9,7 @@ pub mod resource;
 pub mod speed;
 pub mod spell;
 
-use ability::Modifier;
+use ability::{Modifier, Score};
 pub use ability::{Ability, score_to_modifier};
 pub use action::Action;
 pub use character::Character;
@@ -71,6 +71,7 @@ macro_rules! combatant_impls {
 impl Combatant {
     combatant_impls!(
         "Returns the combatant's name.", name, &str;
+        "Returns the combatant's ability scores.", scores, Ability<Score>;
         "Returns the combatant's main armor class.", armor_class, u32;
         "Returns the combatant's main base speed.", speed, &Speed;
         "Returns the combatant's maximum hit points.", max_hit_points, i32;
@@ -171,6 +172,7 @@ macro_rules! combatant_kind_impls {
 impl CombatantKind {
     combatant_kind_impls!(
         "Returns the combatant's name.", name, |c| &c.name, &str;
+        "Returns the combatant's ability scores.", scores, |c| c.scores, Ability<Score>;
         "Returns the combatant's main armor class.", armor_class, |c| c.armor_class.value, u32;
         "Returns the combatant's main base speed.", speed, |c| &c.speed, &Speed;
         "Returns the combatant's maximum hit points.", max_hit_points, |c| c.hit_points, i32;

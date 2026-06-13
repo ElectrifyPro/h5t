@@ -1,21 +1,16 @@
+mod state;
+
 use bimap::BiMap;
 use crate::{
-    state::{AfterKey, ApplyCondition, ApplyDamage, SelectAction, State, UseMovement},
     theme::THEME,
+    view::LABELS,
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Tracker;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
+use state::{AfterKey, ApplyCondition, ApplyDamage, SelectAction, State, UseMovement};
 use std::{collections::HashSet, ops::{Deref, DerefMut}};
-
-/// Labels used for label mode. The tracker will choose labels from this string in sequential
-/// order.
-///
-/// The sequence of labels is simply the characters on a QUERTY keyboard, starting from the
-/// top-left and moving down, then right. This keeps labels physically close to each other on the
-/// keyboard.
-pub(crate) const LABELS: &str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
 
 /// The info block to show in the UI.
 #[derive(Clone, Copy, Debug, PartialEq)]

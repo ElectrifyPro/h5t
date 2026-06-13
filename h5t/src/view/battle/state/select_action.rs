@@ -1,4 +1,4 @@
-use crate::{theme::THEME, view::battle::LABELS, widgets::popup::Popup, Tracker};
+use crate::{theme::THEME, view::LABELS, widgets::popup::Popup, Tracker};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::{resource::ResourcePool, Action};
 use ratatui::{prelude::*, widgets::*};
