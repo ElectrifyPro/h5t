@@ -1,12 +1,20 @@
+use canvas::Canvas;
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
     selectable::Selectable,
     theme::THEME,
     view::LABELS,
-    widgets::popup::Select,
+    widgets::{ability_scores::score_to_color, popup::Select},
 };
 use crossterm::event::{KeyCode, KeyEvent};
-use h5t_core::{ability::Score, monster::MONSTERS, Ability, Combatant, score_to_modifier};
+use h5t_core::{
+    ability::Score,
+    monster::MONSTERS,
+    Ability,
+    Combatant,
+    CombatantKind,
+    score_to_modifier,
+};
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use std::collections::HashMap;
 use super::AfterKey;
@@ -17,7 +25,10 @@ enum Step {
     ChooseKind(Option<CombatantKindLabel>),
 
     /// Adding a pre-existing monster.
-    AddMonster,
+    AddMonster {
+        /// Index of the selected monster in the table **filtered to the current search query**.
+        selected: usize,
+    },
 }
 
 /// Helper enum to choose a combatant kind.
@@ -44,21 +55,8 @@ impl std::fmt::Display for CombatantKindLabel {
     }
 }
 
-/// Creates an iterator of [`Span`]s for displaying a monster's ability modifiers in one line.
+/// Creates an iterator of [`Text`]s for displaying a monster's ability modifiers in one line.
 fn modifier_line(scores: Ability<Score>) -> impl Iterator<Item = Text<'static>> {
-    // TODO: copied from ability_scores.rs
-    // more green for high scores, more red for low scores
-    // 0: (255, 0, 0)
-    // 10: (255, 255, 255)
-    // 20: (0, 255, 0)
-    fn score_to_color(score: i32) -> Color {
-        Color::Rgb(
-            (510.0 - 255.0 / 10.0 * score as f32).min(255.0) as u8,
-            (255.0 / 10.0 * score as f32).min(255.0) as u8,
-            (255.0 - (255.0 / 10.0 * score as f32 - 255.0).abs()).max(0.0) as u8,
-        )
-    }
-
     let make_span = |score: Score| {
         let color = score_to_color(score);
         let modifier = score_to_modifier(score);
@@ -120,7 +118,7 @@ impl AddCombatant {
                     true,
                 ), choose_kind);
             },
-            Step::AddMonster => {
+            Step::AddMonster { selected } => {
                 frame.render_widget(Select::with_selected(
                     "Select combatant to add",
                     &CombatantKindLabel::Monster,
@@ -129,20 +127,42 @@ impl AddCombatant {
 
                 self.search.draw(frame, search);
 
+                // clear the area for the monster search table
+                Clear.render(editor_content, frame.buffer_mut());
+                Widget::render(
+                    Canvas::default()
+                        .background_color(THEME.background.into())
+                        .paint(|_| ()),
+                    editor_content,
+                    frame.buffer_mut(),
+                );
+
                 let widget = Table::new(
                     MONSTERS.iter()
                         .filter(|m| m.name.to_lowercase().contains(self.search.as_str()))
-                        .map(|m| {
+                        .enumerate() // `index` refers to monsters **filtered** in
+                        .map(|(i, m)| {
+                            let is_selected = i == *selected;
+
                             let monster_name = Text::raw(&m.name);
                             let challenge = Text::from(m.challenge_rating.to_string());
                             let xp = Text::from(m.xp.to_string());
                             let hp = Text::from(m.hit_points.to_string())
                                 .alignment(Alignment::Right);
+
+                            let mut style = Style::default().fg(THEME.foreground.into());
+                            if is_selected {
+                                style = style
+                                    .bold()
+                                    .bg(THEME.select.into());
+                            }
+
                             Row::new(
                                 [monster_name, challenge, xp].into_iter()
                                     .chain(modifier_line(m.scores))
                                     .chain(Some(hp))
                             )
+                                .style(style)
                         }),
                     [
                         Constraint::Fill(1),   // monster name
@@ -182,10 +202,21 @@ impl AddCombatant {
     }
 
     /// Handle a key event and apply any needed changes to the combatant list.
-    pub fn handle_key(&mut self, key: KeyEvent, _combatants: &mut Vec<Combatant>) -> AfterKey {
+    pub fn handle_key(&mut self, key: KeyEvent, combatants: &mut Vec<Combatant>) -> AfterKey {
         match &mut self.step {
             Step::ChooseKind(kind) => match key.code {
                 KeyCode::Esc => AfterKey::Exit,
+                KeyCode::Enter => {
+                    // two ways to reach add player / monster step
+                    match kind {
+                        Some(CombatantKindLabel::Player) => (), // TODO
+                        Some(CombatantKindLabel::Monster) => self.step = Step::AddMonster {
+                            selected: 0,
+                        },
+                        _ => (),
+                    }
+                    AfterKey::Stay
+                },
                 KeyCode::Char(label) => {
                     let label_to_option = LABELS
                         .chars()
@@ -198,7 +229,9 @@ impl AddCombatant {
                         } else {
                             *kind = Some(option);
                             if matches!(option, CombatantKindLabel::Monster) {
-                                self.step = Step::AddMonster;
+                                self.step = Step::AddMonster {
+                                    selected: 0,
+                                };
                             }
                         }
                     }
@@ -207,21 +240,35 @@ impl AddCombatant {
                 },
                 _ => AfterKey::Stay,
             },
-            Step::AddMonster => match self.search.handle_key(key) {
+            Step::AddMonster { selected } => match self.search.handle_key(key) {
                 AfterKeyInner::Handled => {
-                    // TODO:
+                    *selected = 0;
                     AfterKey::Stay
                 },
                 AfterKeyInner::Submit(_) => {
-                    // TODO:
-                    AfterKey::Exit
+                    // add monster, but leave window open so more can be added
+                    let maybe_monster = MONSTERS.iter()
+                        .filter(|m| m.name.to_lowercase().contains(self.search.as_str()))
+                        .nth(*selected);
+                    if let Some(monster) = maybe_monster {
+                        combatants.push(CombatantKind::Monster(monster.clone()).into());
+                    }
+                    AfterKey::Stay
                 },
                 AfterKeyInner::Cancel => {
                     self.step = Step::ChooseKind(Some(CombatantKindLabel::Monster));
                     AfterKey::Stay
                 },
-                AfterKeyInner::Forward(_event) => {
-                    // TODO:
+                AfterKeyInner::Forward(event) => {
+                    match event.code {
+                        KeyCode::Up => {
+                            *selected = selected.saturating_sub(1);
+                        },
+                        KeyCode::Down => {
+                            *selected += 1;
+                        },
+                        _ => (),
+                    }
                     AfterKey::Stay
                 },
             },

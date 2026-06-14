@@ -1,4 +1,4 @@
-use crate::{theme::THEME, widgets::HitPoints};
+use crate::{theme::THEME, widgets::{ability_scores::score_to_color, HitPoints}};
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::*};
 
@@ -8,7 +8,10 @@ fn combatant_table(widget: Setup) -> Table {
     fn combatant_row(combatant: &Combatant) -> Row<'_> {
         Row::new([
             Text::from(combatant.name()),
-            Text::from(format!("{:+}", combatant.scores().modifiers().dexterity)),
+            Text::styled(
+                format!("{:+}", combatant.scores().modifiers().dexterity),
+                score_to_color(combatant.scores().dexterity),
+            ),
             Text::from(""),
             HitPoints::new(combatant).line().into(),
         ])
@@ -18,7 +21,7 @@ fn combatant_table(widget: Setup) -> Table {
         widget.combatants.iter()
             .skip(widget.scroll_index)
             .map(|combatant| {
-                let is_selected = true;
+                let is_selected = false;
 
                 let row = combatant_row(combatant);
                 let mut style = Style::default().fg(THEME.foreground.into());
@@ -37,7 +40,7 @@ fn combatant_table(widget: Setup) -> Table {
             }),
         [
             Constraint::Fill(2), // name
-            Constraint::Fill(1), // initiative modifier
+            Constraint::Fill(1), // dexterity modifier
             Constraint::Fill(1), // initiative roll
             Constraint::Fill(1), // hp / max hp
         ],
@@ -45,7 +48,7 @@ fn combatant_table(widget: Setup) -> Table {
         .header(
             Row::new([
                 Text::from("Name").centered(),
-                Text::from("Mod").centered(),
+                Text::from("DEX Mod").centered(),
                 Text::from("Initiative").centered(),
                 Text::from("HP / Max HP").centered(),
             ])
