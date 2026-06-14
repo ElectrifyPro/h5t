@@ -13,6 +13,7 @@ use h5t_core::{
     Ability,
     Combatant,
     CombatantKind,
+    Monster,
     score_to_modifier,
 };
 use ratatui::{layout::Flex, prelude::*, widgets::*};
@@ -72,6 +73,12 @@ fn modifier_line(scores: Ability<Score>) -> impl Iterator<Item = Text<'static>> 
         make_span(scores.charisma),
     ]
         .into_iter()
+}
+
+/// Returns an iterator of [`Monster`]s filtered by the given search query.
+fn query_monsters(search: &str) -> impl Iterator<Item = &'static Monster> {
+    MONSTERS.iter()
+        .filter(move |m| m.name.to_lowercase().contains(search))
 }
 
 /// State for adding a combatant to the combat.
@@ -138,8 +145,7 @@ impl AddCombatant {
                 );
 
                 let widget = Table::new(
-                    MONSTERS.iter()
-                        .filter(|m| m.name.to_lowercase().contains(self.search.as_str()))
+                    query_monsters(self.search.as_str())
                         .enumerate() // `index` refers to monsters **filtered** in
                         .map(|(i, m)| {
                             let is_selected = i == *selected;
@@ -240,37 +246,40 @@ impl AddCombatant {
                 },
                 _ => AfterKey::Stay,
             },
-            Step::AddMonster { selected } => match self.search.handle_key(key) {
-                AfterKeyInner::Handled => {
-                    *selected = 0;
-                    AfterKey::Stay
-                },
-                AfterKeyInner::Submit(_) => {
-                    // add monster, but leave window open so more can be added
-                    let maybe_monster = MONSTERS.iter()
-                        .filter(|m| m.name.to_lowercase().contains(self.search.as_str()))
-                        .nth(*selected);
-                    if let Some(monster) = maybe_monster {
-                        combatants.push(CombatantKind::Monster(monster.clone()).into());
-                    }
-                    AfterKey::Stay
-                },
-                AfterKeyInner::Cancel => {
-                    self.step = Step::ChooseKind(Some(CombatantKindLabel::Monster));
-                    AfterKey::Stay
-                },
-                AfterKeyInner::Forward(event) => {
-                    match event.code {
-                        KeyCode::Up => {
-                            *selected = selected.saturating_sub(1);
-                        },
-                        KeyCode::Down => {
-                            *selected += 1;
-                        },
-                        _ => (),
-                    }
-                    AfterKey::Stay
-                },
+            Step::AddMonster { selected } => {
+                match self.search.handle_key(key) {
+                    AfterKeyInner::Handled => *selected = 0,
+                    AfterKeyInner::Submit(_) => {
+                        // add monster, but leave window open so more can be added
+                        let maybe_monster = query_monsters(self.search.as_str()).nth(*selected);
+                        if let Some(monster) = maybe_monster {
+                            combatants.push(CombatantKind::Monster(monster.clone()).into());
+                        }
+                    },
+                    AfterKeyInner::Cancel => {
+                        self.step = Step::ChooseKind(Some(CombatantKindLabel::Monster));
+                    },
+                    AfterKeyInner::Forward(event) => {
+                        match event.code {
+                            // TODO: scrolling not implemented
+                            KeyCode::Up => {
+                                let monster_count = query_monsters(self.search.as_str()).count();
+                                *selected = selected.checked_sub(1)
+                                    .or(monster_count.checked_sub(1))
+                                    .unwrap_or(0);
+                            },
+                            KeyCode::Down => {
+                                let monster_count = query_monsters(self.search.as_str()).count();
+                                *selected += 1;
+                                if *selected >= monster_count {
+                                    *selected = 0;
+                                }
+                            },
+                            _ => (),
+                        }
+                    },
+                }
+                AfterKey::Stay
             },
         }
     }

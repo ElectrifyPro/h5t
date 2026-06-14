@@ -48,7 +48,7 @@ fn fmt_speed(speed: &Speed) -> String {
         parts.push_str(&speed.to_string());
         parts.push_str(" ft., ");
     }
-    parts.pop(); // remove trailing comma
     parts.pop(); // remove trailing space
+    parts.pop(); // remove trailing comma
     parts
 }
