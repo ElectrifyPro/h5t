@@ -83,7 +83,7 @@ fn basic_stats_table(creature: &CombatantKind) -> Table<'_> {
             ]),
             Row::new(vec![
                 Text::styled("Speed", Modifier::BOLD),
-                Text::raw(fmt_speed(&creature.speed())),
+                Text::raw(fmt_speed(creature.speed())),
             ]),
             match creature {
                 CombatantKind::Character(character) => Row::new(vec![

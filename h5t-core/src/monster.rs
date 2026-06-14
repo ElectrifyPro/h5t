@@ -16,8 +16,7 @@ use std::{collections::HashMap, sync::LazyLock};
 pub static MONSTERS: LazyLock<Vec<Monster>> = LazyLock::new(|| {
     // NOTE: monster JSON data provided courtesy of https://www.dnd5eapi.co/
     let file = std::fs::File::open("data/monsters.json").unwrap();
-    let monsters = serde_json::from_reader(file).unwrap();
-    monsters
+    serde_json::from_reader(file).unwrap()
 });
 
 /// The source of a monster's armor class value.
