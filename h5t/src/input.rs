@@ -40,6 +40,9 @@ pub struct GetInput<T> {
     /// The value of the input field.
     value: String,
 
+    /// The prefix to display before the input value, e.g. a dice expression.
+    prefix: Option<String>,
+
     /// The suffix to display after the input value, indicating the expected format / unit of the
     /// input.
     suffix: Option<String>,
@@ -69,6 +72,7 @@ impl<T> Clone for GetInput<T> {
         Self {
             prompt: self.prompt.clone(),
             value: self.value.clone(),
+            prefix: self.prefix.clone(),
             suffix: self.suffix.clone(),
             max_length: self.max_length,
             charset: self.charset,
@@ -85,6 +89,7 @@ impl<T> std::fmt::Debug for GetInput<T> {
         f.debug_struct("GetInput")
             .field("prompt", &self.prompt)
             .field("value", &self.value)
+            .field("prefix", &self.prefix)
             .field("suffix", &self.suffix)
             .field("max_length", &self.max_length)
             .field("charset", &self.charset)
@@ -99,6 +104,7 @@ impl<T> Default for GetInput<T> {
         Self {
             prompt: String::new(),
             value: String::new(),
+            prefix: None,
             suffix: None,
             max_length: 0,
             charset: Charset::All,
@@ -115,6 +121,7 @@ impl<T: FromStr> GetInput<T> {
         Self {
             prompt: prompt.into(),
             value: String::new(),
+            prefix: None,
             suffix: None,
             max_length,
             charset,
@@ -127,6 +134,18 @@ impl<T: FromStr> GetInput<T> {
     /// Given a mutable reference to the input, set the value in the input.
     pub fn set_value(&mut self, value: impl Into<String>) -> &mut Self {
         self.value = value.into();
+        self
+    }
+
+    /// Set the prefix to display before the input value, e.g. a dice expression.
+    pub fn prefix(mut self, prefix: impl Into<String>) -> Self {
+        self.prefix = Some(prefix.into());
+        self
+    }
+
+    /// Given a mutable reference to the input, set the prefix to display before the input value.
+    pub fn set_prefix(&mut self, prefix: impl Into<String>) -> &mut Self {
+        self.prefix = Some(prefix.into());
         self
     }
 
@@ -174,7 +193,9 @@ impl<T: FromStr> GetInput<T> {
             &self.value,
             self.max_length,
             self.active,
-        ).try_set_suffix(self.suffix.as_deref());
+        )
+            .try_set_prefix(self.prefix.as_deref())
+            .try_set_suffix(self.suffix.as_deref());
         frame.render_widget(widget, area)
     }
 
