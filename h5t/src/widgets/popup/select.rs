@@ -1,5 +1,5 @@
-use crate::{selectable::Selectable, theme::THEME, view::LABELS, widgets::popup::Popup};
-use ratatui::{prelude::*, widgets::*};
+use crate::{selectable::SelectableEnum, theme::THEME, widgets::{popup::Popup, SelectableTable}};
+use ratatui::prelude::*;
 
 /// A popup that displays a selection prompt for an enum. Like [`Multiselect`], but for a single
 /// option.
@@ -11,7 +11,10 @@ pub struct Select<'a, T> {
     /// The prompt to display as the title of the input box.
     prompt: &'a str,
 
-    /// The selected variant.
+    /// The list of options that can be chosen.
+    options: &'a [T],
+
+    /// The selected options.
     selected: Option<&'a T>,
 
     /// Whether to render the widget in an active state.
@@ -19,55 +22,38 @@ pub struct Select<'a, T> {
 }
 
 impl<'a, T> Select<'a, T> {
-    /// Create a new [`Select`] popup with our without a field preselected.
-    pub fn new(prompt: &'a str, selected: Option<&'a T>, active: bool) -> Self {
-        Self { prompt, selected, active }
-    }
-
-    /// Create a new [`Select`] popup with a field preselected.
-    pub fn with_selected(prompt: &'a str, selected: &'a T, active: bool) -> Self {
-        Self { prompt, selected: Some(selected), active }
+    /// Create a [`Select`] popup with the given options and an optional preselected option.
+    #[allow(dead_code)] // NOTE: included for completeness
+    pub fn with_options(
+        prompt: &'a str,
+        options: &'a [T],
+        selected: Option<&'a T>,
+        active: bool,
+    ) -> Self {
+        Self { prompt, options, selected, active }
     }
 }
 
-impl<T: Selectable> Widget for Select<'_, T> {
+impl<'a, E: SelectableEnum + 'static> Select<'a, E> {
+    /// Create a [`Select`] popup from a [`SelectableEnum`] and an optional preselected option.
+    pub fn with_enum(prompt: &'a str, selected: Option<&'a E>, active: bool) -> Self {
+        Self { prompt, options: E::variants(), selected, active }
+    }
+}
+
+impl<T: SelectableEnum> Widget for Select<'_, T> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let content_width = 2 + T::variants() // +2 for the labels
-            .map(|v| v.to_string().len())
-            .max()
-            .unwrap_or(0) as u16;
-        let popup = Popup::new(THEME.foreground, self.prompt, content_width, T::N as u16, self.active);
-        let block_area = popup.block_area(area);
+        let widget = SelectableTable::<T, _, _>::with_options(
+            self.options,
+            |_, item: &T| if let Some(selected_t) = self.selected {
+                selected_t == item
+            } else {
+                false
+            },
+            |_, _: &T| self.active,
+        );
+
+        let popup = Popup::new(THEME.foreground, Some(self.prompt), self.active, widget);
         popup.render(area, buf);
-
-        let theme = if self.active {
-            THEME
-        } else {
-            THEME.dim()
-        };
-        let widget = Table::new(
-            LABELS.chars()
-                .zip(T::variants())
-                .map(|(label, option)| {
-                    let mut style = Style::default()
-                        .fg(theme.foreground.into());
-
-                    if let Some(selected) = self.selected && *selected == option {
-                        style = style.bold().bg(theme.select.into());
-                    }
-
-                    Row::new(vec![
-                        Text::styled(label.to_string(), Modifier::BOLD),
-                        Text::raw(option.to_string()),
-                    ]).style(style)
-                }),
-            [
-                Constraint::Length(1),
-                Constraint::Fill(1),
-            ],
-        )
-            .block(Block::new().padding(Padding::symmetric(2, 1)));
-
-        Widget::render(widget, block_area, buf);
     }
 }

@@ -47,6 +47,14 @@ pub struct Action {
     on_trigger: Vec<Effect>,
 }
 
+// TODO: this is only for getting Vec<Action> to work with SelectableTable (in `select_action.rs`
+// state), this should be refactored
+impl std::fmt::Display for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl Action {
     pub fn costs(&self) -> &[Cost] {
         &self.costs

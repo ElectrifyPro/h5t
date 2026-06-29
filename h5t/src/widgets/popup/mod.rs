@@ -11,84 +11,135 @@ pub use multiselect::Multiselect;
 pub use select::Select;
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 
-/// Computes the area to render a popup in, given horizontal and vertical alignment requirements
-/// and the popup size.
+/// A widget / something that can be rendered that knows its exact size at render time.
+pub trait SizedWidget: Widget {
+    /// Returns the widget's width.
+    fn width(&self) -> u16;
+
+    /// Returns the widget's height.
+    fn height(&self) -> u16;
+
+    /// Returns the widget's width and height.
+    fn size(&self) -> (u16, u16) {
+        (self.width(), self.height())
+    }
+}
+
+impl SizedWidget for Line<'_> {
+    fn width(&self) -> u16 {
+        // how convenient ;)
+        // TODO: same as `self.width() as u16`?
+        Line::width(self) as u16
+    }
+
+    fn height(&self) -> u16 {
+        1
+    }
+}
+
+/// Computes the [`Rect`] within the `target_area` needed to render a popup of size `size`, aligned
+/// within the `target_area` `horizontal`ly and `vertical`ly as specified.
 pub(crate) fn popup_area(
-    area: Rect,
-    horizontal: Flex,
-    vertical: Flex,
+    target_area: Rect,
+    horizontal: HorizontalAlignment,
+    vertical: VerticalAlignment,
     size: (u16, u16),
-    margin: u16,
 ) -> Rect {
     let [area] = Layout::horizontal([Constraint::Length(size.0)])
-        .flex(horizontal)
-        .margin(margin)
-        .areas(area);
+        .flex(match horizontal {
+            HorizontalAlignment::Left => Flex::Start,
+            HorizontalAlignment::Center => Flex::Center,
+            HorizontalAlignment::Right => Flex::End,
+        })
+        .areas(target_area);
     let [area] = Layout::vertical([Constraint::Length(size.1)])
-        .flex(vertical)
-        .margin(margin)
+        .flex(match vertical {
+            VerticalAlignment::Top => Flex::Start,
+            VerticalAlignment::Center => Flex::Center,
+            VerticalAlignment::Bottom => Flex::End,
+        })
         .areas(area);
 
     area
 }
 
-/// A generic popup that shrinks to fit its content.
-pub struct Popup<'a> {
+/// A widget that renders the smallest possible [`Block`] around its content.
+///
+/// This can leave negative space if the target area of a [`Popup`] is significantly large. In this
+/// case, the [`Popup`]'s alignment can be used to position the [`Popup`] within the target area.
+pub struct Popup<'a, W> {
     /// The color of the border.
     color: Rgb,
 
     /// The prompt to display as the title of the popup.
-    prompt: &'a str,
+    prompt: Option<&'a str>,
 
-    /// Whether to render the widget in an active state.
+    /// Whether to render the popup in an active state.
     active: bool,
 
-    /// The size of the popup block.
-    block_size: (u16, u16),
+    /// Horizontal alignment within the popup's target area. This has no effect if the target
+    /// area's size matches the size of the computed popup.
+    horizontal_alignment: HorizontalAlignment,
+
+    /// Vertical alignment within the popup's target area. This has no effect if the target area's
+    /// size matches the size of the computed popup.
+    vertical_alignment: VerticalAlignment,
+
+    /// The renderable widget contained within the popup.
+    inner_widget: W,
 }
 
-impl<'a> Popup<'a> {
-    /// Create a new [`Popup`] with all the required fields.
+impl<'a, W> Popup<'a, W> {
+    /// Create a new [`Popup`] with all the required fields, centered in its target area.
     pub fn new(
         color: Rgb,
-        prompt: &'a str,
-        // the minimum width of the content box (not including the prompt or block borders)
-        content_width: u16,
-        // the minimum height of the content box (not including the prompt or block borders)
-        content_height: u16,
+        prompt: Option<&'a str>,
         active: bool,
+        inner_widget: W,
     ) -> Self {
-        // center widget in `area`
-        // left border (1) + left padding + (1) + right border (1) + right padding (1) = 4
-        let block_width = 4 + content_width;
-        let block_size = (
-            block_width.max(prompt.len() as u16 + 2), // left border + right border = 2
-            // top (1) + bottom border (1) = 2
-            2 + content_height,
-        );
-
-        Self { color, prompt, active, block_size }
-    }
-
-    /// Returns the area containing the entire popup block.
-    pub fn block_area(&self, viewport: Rect) -> Rect {
-        popup_area(viewport, Flex::Center, Flex::Center, self.block_size, 0)
+        Self {
+            color,
+            prompt,
+            active,
+            horizontal_alignment: HorizontalAlignment::Center,
+            vertical_alignment: VerticalAlignment::Center,
+            inner_widget,
+        }
     }
 }
 
-impl Widget for Popup<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let area = self.block_area(area);
+impl<W: SizedWidget> Widget for Popup<'_, W> {
+    fn render(self, target_area: Rect, buf: &mut Buffer) {
+        let inner_widget_size = self.inner_widget.size();
+        let prompt = self.prompt.unwrap_or("");
+
+        let block_width = {
+            // top left border (1) + top right border (1) = +2
+            let width_prompt_only = 2 + prompt.len() as u16;
+            // left border (1) + left padding + (1) + right padding (1) + right border (1) (1) = +4
+            let width_content_only = 4 + inner_widget_size.0;
+            width_prompt_only.max(width_content_only)
+        };
+        let block_area = popup_area(
+            target_area,
+            self.horizontal_alignment,
+            self.vertical_alignment,
+            // top (1) + bottom border (1) = +2
+            (block_width, 2 + inner_widget_size.1),
+        );
+        let content_area = block_area.inner(Margin::new(2, 1));
 
         // clear the area
-        Clear.render(area, buf);
+        Clear.render(block_area, buf);
         Widget::render(
             Canvas::default()
                 .background_color(THEME.background.into())
                 .paint(|_| ()),
-            area,
+            block_area,
             buf,
         );
+
+        self.inner_widget.render(content_area, buf);
 
         let color = if self.active {
             self.color
@@ -96,10 +147,14 @@ impl Widget for Popup<'_> {
             self.color.mix(THEME.background)
         };
 
-        Block::bordered()
+        let mut block = Block::bordered()
             .border_type(BorderType::Rounded)
-            .border_style(color)
-            .title(self.prompt)
-            .render(area, buf);
+            .border_style(color);
+
+        if let Some(prompt) = self.prompt {
+            block = block.title(prompt)
+        };
+
+        block.render(block_area, buf);
     }
 }

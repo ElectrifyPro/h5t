@@ -1,7 +1,7 @@
 use canvas::Canvas;
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
-    selectable::Selectable,
+    selectable::SelectableEnum,
     theme::THEME,
     view::LABELS,
     widgets::{ability_scores::score_to_color, popup::Select},
@@ -39,14 +39,12 @@ enum CombatantKindLabel {
     Monster,
 }
 
-impl Selectable for CombatantKindLabel {
-    const N: usize = 2;
-
-    fn variants() -> impl Iterator<Item = Self> {
-        [
+impl SelectableEnum for CombatantKindLabel {
+    fn variants() -> &'static [Self] {
+        &[
             CombatantKindLabel::Player,
             CombatantKindLabel::Monster,
-        ].into_iter()
+        ]
     }
 }
 
@@ -119,16 +117,16 @@ impl AddCombatant {
 
         match &self.step {
             Step::ChooseKind(kind) => {
-                frame.render_widget(Select::new(
+                frame.render_widget(Select::with_enum(
                     "Select combatant to add",
                     kind.as_ref(),
                     true,
                 ), choose_kind);
             },
             Step::AddMonster { selected } => {
-                frame.render_widget(Select::with_selected(
+                frame.render_widget(Select::with_enum(
                     "Select combatant to add",
-                    &CombatantKindLabel::Monster,
+                    Some(&CombatantKindLabel::Monster),
                     false,
                 ), choose_kind);
 
@@ -226,7 +224,7 @@ impl AddCombatant {
                 KeyCode::Char(label) => {
                     let label_to_option = LABELS
                         .chars()
-                        .zip(CombatantKindLabel::variants())
+                        .zip(CombatantKindLabel::owned_variants())
                         .collect::<HashMap<_, _>>();
 
                     if let Some(&option) = label_to_option.get(&label) {

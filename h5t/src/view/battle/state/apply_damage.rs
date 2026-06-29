@@ -1,6 +1,6 @@
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
-    selectable::Selectable,
+    selectable::SelectableEnum,
     view::LABELS,
     widgets::popup::Select,
     Tracker,
@@ -46,7 +46,7 @@ impl ApplyDamage {
             .areas(frame.area());
 
         self.input.draw(frame, damage_amount);
-        frame.render_widget(Select::new(
+        frame.render_widget(Select::with_enum(
             "Select damage type",
             self.kind.as_ref(),
             true,
@@ -72,7 +72,7 @@ impl ApplyDamage {
 
                 let label_to_option = LABELS
                     .chars()
-                    .zip(DamageKind::variants())
+                    .zip(DamageKind::owned_variants())
                     .collect::<HashMap<_, _>>();
 
                 if let Some(&option) = label_to_option.get(&label) {

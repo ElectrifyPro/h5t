@@ -6,7 +6,7 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::resource::{MovementUsed, Resource};
-use ratatui::{layout::{Flex, Offset}, prelude::*};
+use ratatui::{layout::Flex, prelude::*};
 use super::AfterKey;
 
 /// Unit-agnostic distance that stores distance in units of feet.
@@ -94,30 +94,26 @@ impl UseMovement {
             difficult_terrain_toggle,
             calculation_box,
         ] = Layout::vertical([
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Length(3),
-            ])
+            Constraint::Length(3),
+            Constraint::Length(3),
+            Constraint::Length(3),
+            Constraint::Length(3),
+        ])
             .flex(Flex::Center)
             .areas(frame.area());
         self.distance_squares.draw(frame, distance_squares);
         self.distance_feet.draw(frame, distance_feet);
 
         // difficult terrain toggle
-        // "⦿  difficult terrain".len() = 20
-        let popup = Popup::new(THEME.foreground, "", 20, 1, true);
-        let block_area = popup.block_area(difficult_terrain_toggle);
-        popup.render(difficult_terrain_toggle, frame.buffer_mut());
-
-        Line::from(vec![
+        let toggle_line = Line::from(vec![
             Span::raw(if self.difficult_terrain { "◉" } else { "○" }),
             Span::raw("  difficult terrain"),
         ])
             .centered()
             // .style(if self.difficult_terrain { Modifier::BOLD } else { Modifier::empty() })
-            .style(Modifier::BOLD)
-            .render(block_area + Offset::new(0, 1), frame.buffer_mut());
+            .style(Modifier::BOLD);
+        Popup::new(THEME.foreground, None, true, toggle_line)
+            .render(difficult_terrain_toggle, frame.buffer_mut());
 
         // movement calculation guide
         let movement_used = if self.difficult_terrain {
@@ -135,17 +131,11 @@ impl UseMovement {
         } else {
             format!("will use: {} ft movement", movement_used)
         };
-
-        let calc_width = calculation.len() as u16;
-        let calc_popup = Popup::new(THEME.foreground, "", calc_width, 1, true);
-        let calc_block = calc_popup.block_area(calculation_box);
-
-        calc_popup.render(calculation_box, frame.buffer_mut());
-
-        Line::from(calculation)
+        let calculation_line = Line::from(calculation)
             .centered()
-            .style(Modifier::ITALIC)
-            .render(calc_block + Offset::new(0, 1), frame.buffer_mut());
+            .style(Modifier::ITALIC);
+        Popup::new(THEME.foreground, None, true, calculation_line)
+            .render(calculation_box, frame.buffer_mut());
     }
 
     /// Handle a key event and apply any needed changes to the tracker.

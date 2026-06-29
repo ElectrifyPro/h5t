@@ -1,20 +1,23 @@
 use h5t_core::{ConditionKind, DamageKind};
 use std::{fmt::Display, hash::Hash};
 
-/// Marker type for enums that can be used with [`Tracker::multi_select_enum`].
-pub(crate) trait Selectable: Copy + Hash + Eq + Display {
-    /// The number of variants in the enum.
-    const N: usize;
+/// Marker trait for `enum`s that can enumerate a number of options that can be selected.
+pub(crate) trait SelectableEnum: Copy + Hash + Eq + Display {
+    /// Returns a slice of the possible options of the type.
+    fn variants() -> &'static [Self];
 
-    /// Returns the possible variants of the enum.
-    fn variants() -> impl Iterator<Item = Self>;
+    /// Returns an iterator over the possible options of the type. This is meant as a convenience
+    /// for if the type to iterate over is known at compile time.
+    fn owned_variants() -> impl IntoIterator<Item = Self> where Self: 'static {
+        Self::variants()
+            .iter()
+            .copied()
+    }
 }
 
-impl Selectable for DamageKind {
-    const N: usize = 13;
-
-    fn variants() -> impl Iterator<Item = Self> {
-        [
+impl SelectableEnum for DamageKind {
+    fn variants() -> &'static [Self] {
+        &[
             DamageKind::Acid,
             DamageKind::Bludgeoning,
             DamageKind::Cold,
@@ -28,15 +31,13 @@ impl Selectable for DamageKind {
             DamageKind::Radiant,
             DamageKind::Slashing,
             DamageKind::Thunder,
-        ].into_iter()
+        ]
     }
 }
 
-impl Selectable for ConditionKind {
-    const N: usize = 15;
-
-    fn variants() -> impl Iterator<Item = Self> {
-        [
+impl SelectableEnum for ConditionKind {
+    fn variants() -> &'static [Self] {
+        &[
             ConditionKind::Blinded,
             ConditionKind::Charmed,
             ConditionKind::Deafened,
@@ -52,6 +53,6 @@ impl Selectable for ConditionKind {
             ConditionKind::Restrained,
             ConditionKind::Stunned,
             ConditionKind::Unconscious,
-        ].into_iter()
+        ]
     }
 }

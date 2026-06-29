@@ -1,7 +1,7 @@
-use crate::{theme::THEME, view::LABELS, widgets::popup::Popup, Tracker};
+use crate::{Tracker, theme::THEME, view::LABELS, widgets::{SelectableTable, popup::Popup}};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::{resource::ResourcePool, Action};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::prelude::*;
 use super::AfterKey;
 
 /// State for choosing an action to spend an action point on.
@@ -29,47 +29,20 @@ impl SelectAction {
 
     /// Draw the state to the given [`Frame`].
     pub fn draw(&self, frame: &mut Frame) {
-        // TODO: copied from select widget
+        let widget = SelectableTable::<Action, _, _>::with_options(
+            &self.actions,
+            |idx, _: &Action| if let Some(selected_idx) = self.selected {
+                selected_idx == idx
+            } else {
+                false
+            },
+            |_, action: &Action| self.pool.can_perform(action.costs()),
+        );
+
         let area = frame.area();
         let buf = frame.buffer_mut();
-        let content_width = 2 + self.actions.iter() // +2 for the labels
-            .map(|v| v.name.len())
-            .max()
-            .unwrap_or(0) as u16;
-        let popup = Popup::new(THEME.foreground, "Select action", content_width, self.actions.len() as u16, true);
-        let block_area = popup.block_area(area);
+        let popup = Popup::new(THEME.foreground, Some("Select action"), true, widget);
         popup.render(area, buf);
-
-        let widget = Table::new(
-            LABELS.chars()
-                .zip(&self.actions)
-                .enumerate()
-                .map(|(idx, (label, action))| {
-                    let theme = if self.pool.can_perform(action.costs()) {
-                        THEME
-                    } else {
-                        THEME.dim()
-                    };
-                    let mut style = Style::default()
-                        .fg(theme.foreground.into());
-
-                    if let Some(selected_idx) = self.selected && selected_idx == idx {
-                        style = style.bold().bg(theme.select.into());
-                    }
-
-                    Row::new(vec![
-                        Text::styled(label.to_string(), Modifier::BOLD),
-                        Text::raw(&action.name),
-                    ]).style(style)
-                }),
-            [
-                Constraint::Length(1),
-                Constraint::Fill(1),
-            ],
-        )
-            .block(Block::new().padding(Padding::symmetric(2, 1)));
-
-        Widget::render(widget, block_area, buf);
     }
 
     /// Handle a key event and apply any needed changes to the tracker.

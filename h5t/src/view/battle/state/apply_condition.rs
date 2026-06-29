@@ -1,6 +1,6 @@
 use crate::{
     input::{AfterKey as AfterKeyInput, Charset, GetInput},
-    selectable::Selectable,
+    selectable::SelectableEnum,
     view::LABELS,
     widgets::popup::{popup_area, Multiselect, Select},
     Tracker,
@@ -29,16 +29,14 @@ enum Unit {
     Forever,
 }
 
-impl Selectable for Unit {
-    const N: usize = 4;
-
-    fn variants() -> impl Iterator<Item = Self> {
-        [
+impl SelectableEnum for Unit {
+    fn variants() -> &'static [Self] {
+        &[
             Unit::UntilNextTurn,
             Unit::Round,
             Unit::Minute,
             Unit::Forever,
-        ].into_iter()
+        ]
     }
 }
 
@@ -88,28 +86,33 @@ impl ApplyCondition {
     /// Draw the state to the given [`Frame`].
     pub fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
-        let area = popup_area(area, Flex::Center, Flex::End, (area.width, area.height / 2), 0);
+        let area = popup_area(
+            area,
+            HorizontalAlignment::Center,
+            VerticalAlignment::Bottom,
+            (area.width, area.height / 2),
+        );
         let [conditions, duration] = Layout::horizontal([
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ])
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
             .flex(Flex::Center)
             .areas(area);
         let [duration_unit, duration_amount] = Layout::vertical([
-                Constraint::Length(6),
-                Constraint::Length(3),
-            ])
+            Constraint::Length(6),
+            Constraint::Length(3),
+        ])
             .flex(Flex::Center)
             .areas(duration);
-        frame.render_widget(Multiselect::new(
+        frame.render_widget(Multiselect::with_enum(
             "Select condition(s)",
             &self.conditions,
             self.selected == Field::Conditions,
         ), conditions);
 
-        frame.render_widget(Select::with_selected(
+        frame.render_widget(Select::with_enum(
             "For how long?",
-            &self.unit,
+            Some(&self.unit),
             self.selected == Field::Duration,
         ), duration_unit);
         if self.unit == Unit::Round || self.unit == Unit::Minute {
@@ -123,7 +126,7 @@ impl ApplyCondition {
         if self.selected == Field::Conditions {
             let label_to_option = LABELS
                 .chars()
-                .zip(ConditionKind::variants())
+                .zip(ConditionKind::owned_variants())
                 .collect::<HashMap<_, _>>();
 
             match key.code {
@@ -148,7 +151,7 @@ impl ApplyCondition {
         } else {
             let label_to_option = LABELS
                 .chars()
-                .zip(Unit::variants())
+                .zip(Unit::owned_variants())
                 .collect::<HashMap<_, _>>();
 
             // TODO: these `matche`s are basically the same, please simplify
