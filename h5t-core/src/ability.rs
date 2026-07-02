@@ -14,6 +14,30 @@ pub fn score_to_modifier(score: Score) -> Modifier {
     score / 2 - 5
 }
 
+/// The kinds of abilities.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AbilityKind {
+    Strength,
+    Dexterity,
+    Constitution,
+    Intelligence,
+    Wisdom,
+    Charisma,
+}
+
+impl std::fmt::Display for AbilityKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            AbilityKind::Strength => "STR",
+            AbilityKind::Dexterity => "DEX",
+            AbilityKind::Constitution => "CON",
+            AbilityKind::Intelligence => "INT",
+            AbilityKind::Wisdom => "WIS",
+            AbilityKind::Charisma => "CHA",
+        })
+    }
+}
+
 /// A type that packs together all six ability values.
 ///
 /// It can represent the ability scores themselves, the ability score modifiers, or any other

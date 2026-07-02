@@ -9,7 +9,7 @@ use crate::{
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Tracker;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
-use state::{AfterKey, ApplyCondition, ApplyDamage, SelectAction, State, UseMovement};
+use state::{AfterKey, ApplyCondition, ApplyDamage, ApplySavingThrowDamage, SelectAction, State, UseMovement};
 use std::{collections::HashSet, ops::{Deref, DerefMut}};
 
 /// The info block to show in the UI.
@@ -123,6 +123,13 @@ impl<B: Backend> Battle<B> {
                         continue;
                     }
                     self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
+                },
+                KeyCode::Char('D') => {
+                    let selected = self.enter_label_mode();
+                    if selected.is_empty() {
+                        continue;
+                    }
+                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(selected)));
                 },
                 KeyCode::Char('m') => {
                     self.state = Some(State::UseMovement(UseMovement::new()));

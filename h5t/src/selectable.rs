@@ -1,4 +1,4 @@
-use h5t_core::{ConditionKind, DamageKind};
+use h5t_core::{ConditionKind, DamageKind, ability::AbilityKind};
 use std::{fmt::Display, hash::Hash};
 
 /// Marker trait for `enum`s that can enumerate a number of options that can be selected.
@@ -12,6 +12,19 @@ pub(crate) trait SelectableEnum: Copy + Hash + Eq + Display {
         Self::variants()
             .iter()
             .copied()
+    }
+}
+
+impl SelectableEnum for AbilityKind {
+    fn variants() -> &'static [Self] {
+        &[
+            AbilityKind::Strength,
+            AbilityKind::Dexterity,
+            AbilityKind::Constitution,
+            AbilityKind::Intelligence,
+            AbilityKind::Wisdom,
+            AbilityKind::Charisma,
+        ]
     }
 }
 
