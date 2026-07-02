@@ -71,7 +71,7 @@ impl ApplyDamage {
                 };
 
                 let label_to_option = LABELS
-                    .chars()
+                    .into_iter()
                     .zip(DamageKind::owned_variants())
                     .collect::<HashMap<_, _>>();
 

@@ -3,7 +3,7 @@ mod state;
 use bimap::BiMap;
 use crate::{
     theme::THEME,
-    view::LABELS,
+    view::{LABELS, battle::state::apply_saving_throw_damage::CombatantData},
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
 use crossterm::event::{read, Event, KeyCode};
@@ -129,7 +129,13 @@ impl<B: Backend> Battle<B> {
                     if selected.is_empty() {
                         continue;
                     }
-                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(selected)));
+                    let combatant_data = selected.into_iter()
+                        .map(|idx| {
+                            let combatant = &self.combatants[idx];
+                            CombatantData::new(idx, combatant)
+                        })
+                        .collect();
+                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(combatant_data)));
                 },
                 KeyCode::Char('m') => {
                     self.state = Some(State::UseMovement(UseMovement::new()));
@@ -224,7 +230,7 @@ impl<B: Backend> Battle<B> {
         // be larger than the maximum possible number of combatants.
         let make_label_window = |start_index: usize| {
             LABELS
-                .chars()
+                .into_iter()
                 .zip(start_index..)
                 .take(max_combatants(size))
                 .collect::<BiMap<_, _>>()

@@ -56,7 +56,7 @@ impl SelectAction {
                 AfterKey::Stay
             },
             KeyCode::Char(label) => {
-                let Some(idx) = LABELS.chars().position(|ch| ch == label) else {
+                let Some(idx) = LABELS.into_iter().position(|ch| ch == label) else {
                     return AfterKey::Stay;
                 };
 

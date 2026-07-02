@@ -14,14 +14,43 @@ pub fn score_to_modifier(score: Score) -> Modifier {
     score / 2 - 5
 }
 
+/// Returns the saving throw modifier for the combatant's given ability.
+pub fn save_modifier(
+    ability: AbilityKind,
+    proficiencies: Proficiencies,
+    modifiers: Ability<Modifier>,
+) -> Modifier {
+    let saves = proficiencies.saving_throws;
+    let mods = modifiers;
+    match ability {
+        AbilityKind::Strength => saves.strength.unwrap_or(mods.strength),
+        AbilityKind::Dexterity => saves.dexterity.unwrap_or(mods.dexterity),
+        AbilityKind::Constitution => saves.constitution.unwrap_or(mods.constitution),
+        AbilityKind::Intelligence => saves.intelligence.unwrap_or(mods.intelligence),
+        AbilityKind::Wisdom => saves.wisdom.unwrap_or(mods.wisdom),
+        AbilityKind::Charisma => saves.charisma.unwrap_or(mods.charisma),
+    }
+}
+
 /// The kinds of abilities.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AbilityKind {
+    /// Natural athleticism, bodily power, and physical might.
     Strength,
+
+    /// Physical agility, reflexes, and balance.
     Dexterity,
+
+    /// Health, stamina, and endurance.
     Constitution,
+
+    /// Reasoning, memory, and mental acuity.
     Intelligence,
+
+    /// Awareness, intuition, insight, and mental fortitude.
     Wisdom,
+
+    /// Confidence, eloquence, leadership, and charm.
     Charisma,
 }
 
@@ -78,7 +107,7 @@ impl Ability<Score> {
 }
 
 /// A type that packs together all skills.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Skill<T> {
     /// Acrobatics (Dexterity).
     pub acrobatics: T,
@@ -136,7 +165,7 @@ pub struct Skill<T> {
 }
 
 /// A creature's proficiencies.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Proficiencies {
     /// The creature's skill proficiencies.
     ///

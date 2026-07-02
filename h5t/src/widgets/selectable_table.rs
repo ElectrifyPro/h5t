@@ -69,7 +69,7 @@ where
 {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let table = Table::new(
-            LABELS.chars()
+            LABELS.into_iter()
                 .zip(self.options)
                 .enumerate()
                 .map(|(idx, (label, variant))| {
@@ -79,7 +79,8 @@ where
                         THEME.dim()
                     };
                     let mut style = Style::default()
-                        .fg(theme.foreground.into());
+                        .fg(theme.foreground.into())
+                        .bg(theme.background.into());
 
                     if (self.selected_fn)(idx, variant) {
                         style = style.bold().bg(theme.select.into());

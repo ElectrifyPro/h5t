@@ -11,4 +11,7 @@ pub mod setup;
 /// The sequence of labels is simply the characters on a QUERTY keyboard, starting from the top-left
 /// and moving down, then right. This keeps labels physically close to each other on the keyboard.
 // TODO: change labels for different keyboard layouts
-pub(crate) const LABELS: &str = "qazwsxedcrfvtgbyhnujmik,ol.p;/[']";
+pub(crate) const LABELS: [char; 33] = [
+    'q', 'a', 'z', 'w', 's', 'x', 'e', 'd', 'c', 'r', 'f', 'v', 't', 'g', 'b', 'y', 'h', 'n', 'u',
+    'j', 'm', 'i', 'k', ',', 'o', 'l', '.', 'p', ';', '/', '[', '\'', ']',
+];

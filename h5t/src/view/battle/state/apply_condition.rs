@@ -125,7 +125,7 @@ impl ApplyCondition {
         // generate labels for all conditions
         if self.selected == Field::Conditions {
             let label_to_option = LABELS
-                .chars()
+                .into_iter()
                 .zip(ConditionKind::owned_variants())
                 .collect::<HashMap<_, _>>();
 
@@ -150,7 +150,7 @@ impl ApplyCondition {
             }
         } else {
             let label_to_option = LABELS
-                .chars()
+                .into_iter()
                 .zip(Unit::owned_variants())
                 .collect::<HashMap<_, _>>();
 

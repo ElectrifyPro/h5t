@@ -5,6 +5,7 @@ pub mod hit_points;
 pub mod popup;
 pub mod selectable_table;
 pub mod setup;
+pub mod sized_table;
 pub mod stat_block;
 pub mod tracker;
 
@@ -14,6 +15,7 @@ pub use conditions::CompactConditions;
 pub use hit_points::HitPoints;
 pub use selectable_table::SelectableTable;
 pub use setup::Setup;
+pub use sized_table::SizedTable;
 pub use stat_block::StatBlock;
 pub use tracker::Tracker;
 

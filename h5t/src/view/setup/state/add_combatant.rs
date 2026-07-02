@@ -223,7 +223,7 @@ impl AddCombatant {
                 },
                 KeyCode::Char(label) => {
                     let label_to_option = LABELS
-                        .chars()
+                        .into_iter()
                         .zip(CombatantKindLabel::owned_variants())
                         .collect::<HashMap<_, _>>();
 
