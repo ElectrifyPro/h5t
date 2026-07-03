@@ -54,17 +54,17 @@ impl std::fmt::Display for Unit {
 /// State for applying conditions to combatants.
 #[derive(Clone, Debug)]
 pub struct ApplyCondition {
+    /// Indicates which form field is currently selected.
+    field: Field,
+
     /// The combatant indices to apply damage to.
     combatants: HashSet<usize>,
 
     /// The conditions to apply to combatants.
     conditions: HashSet<ConditionKind>,
 
-    /// Indicates which form field is currently selected.
-    selected: Field,
-
     /// Helper to get the condition duration from the user.
-    input: GetInput<u32>,
+    duration: GetInput<NonZeroU32>,
 
     /// Duration of the conditions.
     unit: Unit,
@@ -76,141 +76,20 @@ impl ApplyCondition {
         Self {
             combatants,
             conditions: HashSet::new(),
-            selected: Field::default(),
-            input: GetInput::new("Duration", 4, Charset::Numeric) // number of rounds / minutes is usually 1-2 digits
+            field: Field::default(),
+            duration: GetInput::new("Duration", 4, Charset::Numeric) // number of rounds / minutes is usually 1-2 digits
                 .suffix(Unit::default().to_string()),
             unit: Unit::default(),
         }
     }
 
-    /// Draw the state to the given [`Frame`].
-    pub fn draw(&self, frame: &mut Frame) {
-        let area = frame.area();
-        let area = popup_area(
-            area,
-            HorizontalAlignment::Center,
-            VerticalAlignment::Bottom,
-            (area.width, area.height / 2),
-        );
-        let [conditions, duration] = Layout::horizontal([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
-            .flex(Flex::Center)
-            .areas(area);
-        let [duration_unit, duration_amount] = Layout::vertical([
-            Constraint::Length(6),
-            Constraint::Length(3),
-        ])
-            .flex(Flex::Center)
-            .areas(duration);
-        frame.render_widget(Multiselect::with_enum(
-            "Select condition(s)",
-            &self.conditions,
-            self.selected == Field::Conditions,
-        ), conditions);
-
-        frame.render_widget(Select::with_enum(
-            "For how long?",
-            Some(&self.unit),
-            self.selected == Field::Duration,
-        ), duration_unit);
-        if self.unit == Unit::Round || self.unit == Unit::Minute {
-            self.input.draw(frame, duration_amount);
-        }
-    }
-
-    /// Handle a key event and apply any needed changes to the tracker.
-    pub fn handle_key(&mut self, key: KeyEvent, tracker: &mut Tracker) -> AfterKey {
-        // generate labels for all conditions
-        if self.selected == Field::Conditions {
-            let label_to_option = LABELS
-                .into_iter()
-                .zip(ConditionKind::owned_variants())
-                .collect::<HashMap<_, _>>();
-
-            match key.code {
-                KeyCode::Esc => return AfterKey::Exit,
-                KeyCode::Enter => {
-                    self.selected = Field::Duration;
-                    self.input.set_active(true);
-                    return AfterKey::Stay;
-                },
-                KeyCode::Char(label) => {
-                    let selected = &mut self.conditions;
-                    if let Some(option) = label_to_option.get(&label) {
-                        if selected.contains(option) {
-                            selected.remove(option);
-                        } else {
-                            selected.insert(*option);
-                        }
-                    }
-                },
-                _ => (),
-            }
-        } else {
-            let label_to_option = LABELS
-                .into_iter()
-                .zip(Unit::owned_variants())
-                .collect::<HashMap<_, _>>();
-
-            // TODO: these `matche`s are basically the same, please simplify
-            if self.unit == Unit::UntilNextTurn || self.unit == Unit::Forever {
-                match key.code {
-                    KeyCode::Esc => {
-                        self.selected = Field::Conditions;
-                        return AfterKey::Stay;
-                    },
-                    KeyCode::Enter => {
-                        self.apply(tracker, 0);
-                        return AfterKey::Exit;
-                    },
-                    KeyCode::Char(label) => {
-                        let selected = &mut self.unit;
-                        if let Some(option) = label_to_option.get(&label) {
-                            *selected = *option;
-                            self.input.set_suffix(selected.to_string().to_lowercase());
-                        }
-                    },
-                    _ => (),
-                }
-            } else {
-                match self.input.handle_key(key) {
-                    AfterKeyInput::Handled => return AfterKey::Stay,
-                    AfterKeyInput::Submit(amount) => {
-                        self.apply(tracker, amount);
-                        return AfterKey::Exit;
-                    },
-                    AfterKeyInput::Cancel => {
-                        self.selected = Field::Conditions;
-                        self.input.set_active(false);
-                        return AfterKey::Stay;
-                    },
-                    AfterKeyInput::Forward(key) => {
-                        let KeyCode::Char(label) = key.code else {
-                            return AfterKey::Stay;
-                        };
-
-                        let selected = &mut self.unit;
-                        if let Some(option) = label_to_option.get(&label) {
-                            *selected = *option;
-                            self.input.set_suffix(selected.to_string().to_lowercase());
-                        }
-                    },
-                }
-            }
-        }
-
-        AfterKey::Stay
-    }
-
     /// Apply the conditions to the tracker.
-    fn apply(&self, tracker: &mut h5t_core::Tracker, amount: u32) {
+    fn apply(&self, tracker: &mut h5t_core::Tracker, amount: NonZeroU32) {
         for condition in &self.conditions {
             let duration = match self.unit {
                 Unit::UntilNextTurn => ConditionDuration::UntilNextTurn,
-                Unit::Round => ConditionDuration::Rounds(NonZeroU32::new(amount).unwrap()),
-                Unit::Minute => ConditionDuration::Minutes(NonZeroU32::new(amount).unwrap()),
+                Unit::Round => ConditionDuration::Rounds(amount),
+                Unit::Minute => ConditionDuration::Minutes(amount),
                 Unit::Forever => ConditionDuration::Forever,
             };
 
@@ -237,6 +116,118 @@ impl ApplyCondition {
                     });
                 }
             }
+        }
+    }
+
+    /// Handle a key event during the [`Field::Conditions`] step.
+    fn conditions_field(&mut self, key: KeyEvent) -> AfterKey {
+        match key.code {
+            KeyCode::Esc => return AfterKey::Exit,
+            KeyCode::Enter => {
+                self.field = Field::Duration;
+                self.duration.set_active(true);
+            },
+            KeyCode::Char(label) => {
+                let label_to_option = LABELS
+                    .into_iter()
+                    .zip(ConditionKind::owned_variants())
+                    .collect::<HashMap<_, _>>();
+
+                let selected = &mut self.conditions;
+                if let Some(option) = label_to_option.get(&label) {
+                    if selected.contains(option) {
+                        selected.remove(option);
+                    } else {
+                        selected.insert(*option);
+                    }
+                }
+            },
+            _ => (),
+        }
+
+        AfterKey::Stay
+    }
+
+    /// Handle a key event during the [`Field::Duration`] step.
+    fn duration_field(&mut self, key: KeyEvent, tracker: &mut Tracker) -> AfterKey {
+        // NOTE: the input field handles all input, even if the `Unit::UntilNextTurn` or
+        // `Unit::Forever` is selected, just for a simple implementation
+        match self.duration.handle_key(key) {
+            AfterKeyInput::Handled => (),
+            AfterKeyInput::Submit(amount) => {
+                self.apply(tracker, amount);
+                return AfterKey::Exit;
+            },
+            AfterKeyInput::Cancel => {
+                self.field = Field::Conditions;
+                self.duration.set_active(false);
+            },
+            AfterKeyInput::Forward(key) => {
+                let KeyCode::Char(label) = key.code else {
+                    return AfterKey::Stay;
+                };
+
+                let label_to_option = LABELS
+                    .into_iter()
+                    .zip(Unit::owned_variants())
+                    .collect::<HashMap<_, _>>();
+
+                let selected = &mut self.unit;
+                if let Some(option) = label_to_option.get(&label) {
+                    *selected = *option;
+                    self.duration.reset_value();
+                    self.duration.set_suffix(selected.to_string().to_lowercase());
+                }
+            },
+        }
+
+        AfterKey::Stay
+    }
+}
+
+impl ApplyCondition {
+    /// Draw the state to the given [`Frame`].
+    pub fn draw(&self, frame: &mut Frame) {
+        let area = frame.area();
+        let area = popup_area(
+            area,
+            HorizontalAlignment::Center,
+            VerticalAlignment::Bottom,
+            (area.width, area.height / 2),
+        );
+        let [conditions, duration] = Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
+            .flex(Flex::Center)
+            .areas(area);
+        let [duration_unit, duration_amount] = Layout::vertical([
+            Constraint::Length(6),
+            Constraint::Length(3),
+        ])
+            .flex(Flex::Center)
+            .areas(duration);
+        frame.render_widget(Multiselect::with_enum(
+            "Select condition(s)",
+            &self.conditions,
+            self.field == Field::Conditions,
+        ), conditions);
+
+        frame.render_widget(Select::with_enum(
+            "For how long?",
+            Some(&self.unit),
+            self.field == Field::Duration,
+        ), duration_unit);
+        if self.unit == Unit::Round || self.unit == Unit::Minute {
+            self.duration.draw(frame, duration_amount);
+        }
+    }
+
+    /// Handle a key event and apply any needed changes to the tracker.
+    pub fn handle_key(&mut self, key: KeyEvent, tracker: &mut Tracker) -> AfterKey {
+        match self.field {
+            Field::Conditions => self.conditions_field(key),
+            Field::Duration => self.duration_field(key, tracker),
         }
     }
 }

@@ -137,6 +137,13 @@ impl<T: FromStr> GetInput<T> {
         self
     }
 
+    /// Blanks out the input and resets the touched state of the input.
+    pub fn reset_value(&mut self) -> &mut Self {
+        self.value = String::new();
+        self.touched = false;
+        self
+    }
+
     /// Set the prefix to display before the input value, e.g. a dice expression.
     pub fn prefix(mut self, prefix: impl Into<String>) -> Self {
         self.prefix = Some(prefix.into());

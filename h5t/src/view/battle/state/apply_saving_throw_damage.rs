@@ -165,7 +165,7 @@ impl ApplySavingThrowDamage {
         self.saving_throw.set_prefix(fmt_dice_expr(save_mod));
     }
 
-    /// Handle a key event during the [`Field::Ability`] step.
+    /// Handle a key event during the [`Step::Ability`] step.
     fn ability_step(&mut self, key: KeyEvent) -> AfterKey {
         match self.save_dc.handle_key(key) {
             AfterKeyInner::Handled => (),
@@ -197,7 +197,7 @@ impl ApplySavingThrowDamage {
         AfterKey::Stay
     }
 
-    /// Handle a key event during the [`Field::RollSave`] step.
+    /// Handle a key event during the [`Step::RollSave`] step.
     fn roll_save_step(&mut self, key: KeyEvent) -> AfterKey {
         match self.saving_throw.handle_key(key) {
             AfterKeyInner::Handled => {
@@ -246,7 +246,7 @@ impl ApplySavingThrowDamage {
         AfterKey::Stay
     }
 
-    /// Handle a key event during the [`Field::Damage`] step and apply any needed changes to the
+    /// Handle a key event during the [`Step::Damage`] step and apply any needed changes to the
     /// tracker.
     fn damage_step(&mut self, key: KeyEvent, tracker: &mut Tracker) -> AfterKey {
         match self.damage_value.handle_key(key) {
