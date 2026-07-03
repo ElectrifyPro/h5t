@@ -36,6 +36,7 @@ pub struct Theme {
     pub accent: Rgb,
     pub error: Rgb,
     pub warning: Rgb,
+    pub success: Rgb,
 
     // domain-specific colors
 
@@ -63,6 +64,7 @@ impl Theme {
             accent: Rgb(255, 165, 0),
             error: Rgb(247, 118, 142), // pastel red
             warning: Rgb(224, 175, 104), // pastel yellow
+            success: Rgb(102, 242, 111), // pastel green
 
             action: Rgb(158, 206, 106), // lime green
             bonus_action: Rgb(255, 165, 0), // gold
@@ -82,6 +84,7 @@ impl Theme {
             secondary: self.secondary.mix(background),
             select: self.select.mix(background),
             accent: self.accent.mix(background),
+            success: self.success.mix(background),
             error: self.error.mix(background),
             warning: self.warning.mix(background),
 
@@ -94,18 +97,4 @@ impl Theme {
 }
 
 /// The default theme for the UI.
-pub static THEME: Theme = Theme {
-    background: Rgb(26, 27, 38), // indigo
-    foreground: Rgb(192, 202, 245), // light blue
-    primary: Rgb(0, 48, 130), // dark blue
-    secondary: Rgb(65, 72, 104), // blue gray
-    select: Rgb(128, 85, 0), // dark yellow
-    accent: Rgb(255, 165, 0),
-    error: Rgb(247, 118, 142), // pastel red
-    warning: Rgb(224, 175, 104), // pastel yellow
-
-    action: Rgb(158, 206, 106), // lime green
-    bonus_action: Rgb(255, 165, 0), // gold
-    reaction: Rgb(187, 154, 247), // pastel purple
-    dead: Rgb(100, 0, 0), // dark red
-};
+pub static THEME: Theme = Theme::new();

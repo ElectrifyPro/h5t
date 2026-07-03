@@ -69,6 +69,17 @@ impl CombatantData {
     }
 }
 
+/// Whether a combatant has passed the save DC or not.
+#[derive(PartialEq)]
+enum HasSaved {
+    Yes,
+
+    /// The save DC or the combatant's saving throw is not set.
+    Unknown,
+
+    No,
+}
+
 /// State for applying damage to combatants after requiring a saving throw.
 #[derive(Clone, Debug, Default)]
 pub struct ApplySavingThrowDamage {
@@ -77,6 +88,9 @@ pub struct ApplySavingThrowDamage {
 
     /// The combatant indices to apply damage to.
     combatants: Vec<CombatantData>,
+
+    /// Helper to get the save DC from the user.
+    save_dc: GetInput<i32>,
 
     /// The ability combatants must use for the saving throw.
     ability: Option<AbilityKind>,
@@ -102,9 +116,11 @@ impl ApplySavingThrowDamage {
         Self {
             step: Step::default(),
             combatants,
+            save_dc: GetInput::new("Save DC", 5, Charset::Numeric),
             ability: None,
             saving_throw: GetInput::new("Saving throw", 3, Charset::Numeric)
-                .active(false),
+                .active(false)
+                .prefix("d20 ="),
             selected_idx: 0,
             damage_value: GetInput::new("Damage amount", 4, Charset::Numeric) // damage is usually 1-2 digits
                 .active(false)
@@ -113,9 +129,23 @@ impl ApplySavingThrowDamage {
         }
     }
 
+    /// Determines if the given combatant has passed the set save DC.
+    fn has_saved(&self, data: &CombatantData) -> HasSaved {
+        let (Ok(dc), Some(save)) = (self.save_dc.get_parsed(), data.save) else {
+            return HasSaved::Unknown;
+        };
+
+        if save >= dc {
+            HasSaved::Yes
+        } else {
+            HasSaved::No
+        }
+    }
+
     /// Switch the step and the corresponding visual aids.
     fn set_step(&mut self, new_step: Step) {
         self.step = new_step;
+        self.save_dc.set_active(new_step == Step::Ability);
         self.saving_throw.set_active(new_step == Step::RollSave);
         self.damage_value.set_active(new_step == Step::Damage);
     }
@@ -137,15 +167,20 @@ impl ApplySavingThrowDamage {
 
     /// Handle a key event during the [`Field::Ability`] step.
     fn ability_step(&mut self, key: KeyEvent) -> AfterKey {
-        let label_to_option = LABELS
-            .into_iter()
-            .zip(AbilityKind::owned_variants())
-            .collect::<HashMap<_, _>>();
+        match self.save_dc.handle_key(key) {
+            AfterKeyInner::Handled => (),
+            AfterKeyInner::Submit(_) => self.set_step(Step::RollSave),
+            AfterKeyInner::Cancel => return AfterKey::Exit,
+            AfterKeyInner::Forward(key) => {
+                let KeyCode::Char(label) = key.code else {
+                    return AfterKey::Stay;
+                };
 
-        match key.code {
-            KeyCode::Esc => return AfterKey::Exit,
-            KeyCode::Enter => self.set_step(Step::RollSave),
-            KeyCode::Char(label) => {
+                let label_to_option = LABELS
+                    .into_iter()
+                    .zip(AbilityKind::owned_variants())
+                    .collect::<HashMap<_, _>>();
+
                 if let Some(&option) = label_to_option.get(&label) {
                     if self.ability == Some(option) {
                         self.ability = None;
@@ -157,7 +192,6 @@ impl ApplySavingThrowDamage {
                     self.set_selected_idx(self.selected_idx);
                 }
             },
-            _ => (),
         }
 
         AfterKey::Stay
@@ -221,7 +255,12 @@ impl ApplySavingThrowDamage {
                 for data in &self.combatants {
                     let combatant_idx = data.idx;
                     let combatant = &mut tracker.combatants[combatant_idx];
-                    combatant.damage(value, self.damage_kind);
+                    let damage_after_save = if self.has_saved(data) == HasSaved::Yes {
+                        value / 2 // TODO: more effects
+                    } else {
+                        value
+                    };
+                    combatant.damage(damage_after_save, self.damage_kind);
                 }
                 return AfterKey::Exit;
             },
@@ -260,6 +299,12 @@ impl ApplySavingThrowDamage {
         ])
             .flex(Flex::Center)
             .areas(frame.area());
+        let [save_dc, ability_table] = Layout::vertical([
+            Constraint::Length(3),
+            Constraint::Length(8),
+        ])
+            .flex(Flex::Center)
+            .areas(select_ability);
         let [save_input, save_table] = Layout::vertical([
             Constraint::Length(3),
             Constraint::Length(3 + self.combatants.len() as u16),
@@ -273,11 +318,12 @@ impl ApplySavingThrowDamage {
             .flex(Flex::Center)
             .areas(damage);
 
+        self.save_dc.draw(frame, save_dc);
         frame.render_widget(Select::with_enum(
             "Select save ability",
             self.ability.as_ref(),
             self.step == Step::Ability,
-        ), select_ability);
+        ), ability_table);
 
         let roll_save_theme = if self.step == Step::RollSave {
             THEME
@@ -310,6 +356,11 @@ impl ApplySavingThrowDamage {
                         Text::raw(&data.name),
                         Text::raw(fmt_dice_expr(save_mod)),
                         Text::raw(data.save.map(|save| save.to_string()).unwrap_or(String::new())),
+                        match self.has_saved(data) {
+                            HasSaved::Yes => Text::raw("PASS").fg(roll_save_theme.success),
+                            HasSaved::Unknown => Text::raw("????").fg(roll_save_theme.dim().foreground),
+                            HasSaved::No => Text::raw("FAIL").fg(roll_save_theme.error),
+                        },
                     ])
                         .style(style)
                 }),
@@ -317,7 +368,8 @@ impl ApplySavingThrowDamage {
                 2,
                 2 + longest_combatant_name.unwrap_or(0).max("Combatant".len()) as u16,
                 2 + "Expression".len() as u16,
-                2 + "Roll result".len() as u16,
+                2 + "Roll".len() as u16,
+                2 + "Result".len() as u16,
             ],
             0,
         )
@@ -326,7 +378,8 @@ impl ApplySavingThrowDamage {
                     " ",
                     "Combatant",
                     "Expression",
-                    "Roll result",
+                    "Roll",
+                    "Result",
                 ])
                     .style(roll_save_theme.foreground)
                     .bold(),
