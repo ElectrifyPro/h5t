@@ -3,7 +3,7 @@ mod state;
 use bimap::BiMap;
 use crate::{
     theme::THEME,
-    view::{LABELS, battle::state::apply_saving_throw_damage::CombatantData},
+    view::LABELS,
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
 use crossterm::event::{read, Event, KeyCode};
@@ -129,13 +129,11 @@ impl<B: Backend> Battle<B> {
                     if selected.is_empty() {
                         continue;
                     }
-                    let combatant_data = selected.into_iter()
-                        .map(|idx| {
-                            let combatant = &self.combatants[idx];
-                            CombatantData::new(idx, combatant)
-                        })
-                        .collect();
-                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(combatant_data)));
+
+                    let data_iter = selected
+                        .into_iter()
+                        .map(|idx| (idx, &self.combatants[idx]));
+                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(data_iter)));
                 },
                 KeyCode::Char('m') => {
                     self.state = Some(State::UseMovement(UseMovement::new()));

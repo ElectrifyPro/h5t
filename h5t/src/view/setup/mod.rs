@@ -4,7 +4,7 @@ use crate::{theme::THEME, widgets::{Setup as SetupWidget}};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
-use state::{AddCombatant, AfterKey, State};
+use state::{AddCombatant, AfterKey, RollInitiative, State};
 
 /// The setup view, used to setup and add combatants, and roll initiative order.
 pub struct Setup<B: Backend> {
@@ -66,13 +66,17 @@ impl<B: Backend> Setup<B> {
                 KeyCode::Char('a') => {
                     self.state = Some(State::AddCombatant(AddCombatant::new()));
                 },
-                KeyCode::Char('R') => {
-                    // roll initiative for all combatants
-                    for combatant in self.combatants.iter_mut() {
-                        let roll = rand::random::<u32>() % 20 + 1;
-                        let dex_mod = combatant.scores().modifiers().dexterity;
-                        combatant.initiative = Some(roll as i32 + dex_mod);
-                    }
+                KeyCode::Char('r') => {
+                    let data_iter = self.combatants
+                        .iter()
+                        .enumerate();
+                    self.state = Some(State::RollInitiative(RollInitiative::new(data_iter)));
+                },
+                // roll initiative for all combatants
+                KeyCode::Char('R') => for combatant in self.combatants.iter_mut() {
+                    let roll = rand::random::<u32>() % 20 + 1;
+                    let dex_mod = combatant.scores().modifiers().dexterity;
+                    combatant.initiative = Some(roll as i32 + dex_mod);
                 },
                 KeyCode::Char('s') => {
                     self.combatants.sort_by(|a, b| {

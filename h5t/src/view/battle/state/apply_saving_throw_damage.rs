@@ -111,8 +111,11 @@ pub struct ApplySavingThrowDamage {
 }
 
 impl ApplySavingThrowDamage {
-    /// Create an [`ApplySavingThrowDamage`] state with the given combatants.
-    pub fn new(combatants: Vec<CombatantData>) -> Self {
+    /// Create an [`ApplySavingThrowDamage`] state with the given combatant data.
+    pub fn new<'a>(data: impl Iterator<Item = (usize, &'a Combatant)>) -> Self {
+        let combatants = data
+            .map(|(idx, combatant)| CombatantData::new(idx, combatant))
+            .collect();
         Self {
             step: Step::default(),
             combatants,

@@ -1,6 +1,8 @@
 pub mod add_combatant;
+pub mod roll_initiative;
 
 pub use add_combatant::AddCombatant;
+pub use roll_initiative::RollInitiative;
 
 /// What to do after handling a key event.
 #[derive(Default)]
@@ -54,4 +56,5 @@ macro_rules! create_state {
 
 create_state!(
     "Adding a combatant to the combat.", AddCombatant;
+    "Rolling initiative for each combatant.", RollInitiative;
 );
