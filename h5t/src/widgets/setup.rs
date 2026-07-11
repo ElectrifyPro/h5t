@@ -12,7 +12,11 @@ fn combatant_table(widget: Setup) -> Table {
                 format!("{:+}", combatant.scores().modifiers().dexterity),
                 score_to_color(combatant.scores().dexterity),
             ),
-            Text::from(""),
+            Text::from(
+                combatant.initiative
+                    .map(|init| init.to_string())
+                    .unwrap_or(String::from("")),
+            ),
             HitPoints::new(combatant).line().into(),
         ])
     }

@@ -66,6 +66,26 @@ impl<B: Backend> Setup<B> {
                 KeyCode::Char('a') => {
                     self.state = Some(State::AddCombatant(AddCombatant::new()));
                 },
+                KeyCode::Char('R') => {
+                    // roll initiative for all combatants
+                    for combatant in self.combatants.iter_mut() {
+                        let roll = rand::random::<u32>() % 20 + 1;
+                        let dex_mod = combatant.scores().modifiers().dexterity;
+                        combatant.initiative = Some(roll as i32 + dex_mod);
+                    }
+                },
+                KeyCode::Char('s') => {
+                    self.combatants.sort_by(|a, b| {
+                        match (a.initiative, b.initiative) {
+                            // sort combatants with no initiative *before* those with a set
+                            // initiative to make it obvious to user
+                            (a @ Some(_), b @ None) | (a @ None, b @ Some(_)) => a.cmp(&b),
+
+                            // higher initiative comes first
+                            (a, b) => b.cmp(&a),
+                        }
+                    });
+                },
                 KeyCode::Char('q') => break,
                 _ => (),
             }

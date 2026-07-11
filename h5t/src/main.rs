@@ -23,6 +23,7 @@ fn main() {
     use std::collections::HashMap;
     let pcs = vec![
         Combatant {
+            initiative: None,
             kind: CombatantKind::Character(Character {
                 index: String::from("astarion"),
                 name: String::from("Astarion"),

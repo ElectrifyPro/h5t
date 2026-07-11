@@ -32,6 +32,12 @@ pub struct Id(Cow<'static, str>);
 /// Combatants can include player characters, monsters, NPCs, etc.
 #[derive(Debug)]
 pub struct Combatant {
+    /// The initiative value of the combatant.
+    ///
+    /// This value is only used when sorting the initiative order. The user can override initiative
+    /// order at any time.
+    pub initiative: Option<i32>,
+
     /// The kind of creature the combatant is.
     pub kind: CombatantKind,
 
@@ -130,6 +136,7 @@ impl From<Character> for CombatantKind {
 impl From<Character> for Combatant {
     fn from(character: Character) -> Self {
         Self {
+            initiative: None,
             hit_points: character.hit_points,
             conditions: Vec::new(),
             kind: character.into(),
@@ -147,6 +154,7 @@ impl From<Monster> for CombatantKind {
 impl From<Monster> for Combatant {
     fn from(monster: Monster) -> Self {
         Self {
+            initiative: None,
             hit_points: monster.hit_points,
             conditions: Vec::new(),
             kind: monster.into(),
