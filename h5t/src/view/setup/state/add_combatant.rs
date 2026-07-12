@@ -245,8 +245,23 @@ impl AddCombatant {
                 _ => AfterKey::Stay,
             },
             Step::AddMonster { selected } => {
+                let last_selected_monster = query_monsters(self.search.as_str()).nth(*selected);
                 match self.search.handle_key(key) {
-                    AfterKeyInner::Handled => *selected = 0,
+                    AfterKeyInner::Handled => {
+                        if let Some(last_selected_monster) = last_selected_monster
+                            && let Some((current_idx, _)) = query_monsters(self.search.as_str())
+                                .enumerate()
+                                .find(|(_, m)| m.index == last_selected_monster.index)
+                        {
+                            // keep selection on the previously selected monster if it is still there
+                            // TODO: can send the cursor far off into the distance when search is
+                            // reset
+                            *selected = current_idx;
+                        } else {
+                            let monster_count = query_monsters(self.search.as_str()).count();
+                            *selected = (*selected).min(monster_count.saturating_sub(1));
+                        }
+                    },
                     AfterKeyInner::Submit(_) => {
                         // add monster, but leave window open so more can be added
                         let maybe_monster = query_monsters(self.search.as_str()).nth(*selected);
