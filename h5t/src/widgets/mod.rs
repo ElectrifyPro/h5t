@@ -1,4 +1,5 @@
 pub mod ability_scores;
+pub mod color_picker;
 pub mod combatant_block;
 pub mod conditions;
 pub mod hit_points;
@@ -10,6 +11,7 @@ pub mod stat_block;
 pub mod tracker;
 
 pub use ability_scores::AbilityScores;
+pub use color_picker::ColorPicker;
 pub use combatant_block::CombatantBlock;
 pub use conditions::CompactConditions;
 pub use hit_points::HitPoints;
