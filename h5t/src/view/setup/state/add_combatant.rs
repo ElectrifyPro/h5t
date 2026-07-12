@@ -74,8 +74,9 @@ fn modifier_line(scores: Ability<Score>) -> impl Iterator<Item = Text<'static>> 
 
 /// Returns an iterator of [`Monster`]s filtered by the given search query.
 fn query_monsters(search: &str) -> impl Iterator<Item = &'static Monster> {
+    let lower_search = search.to_lowercase();
     MONSTERS.iter()
-        .filter(move |m| m.name.to_lowercase().contains(search))
+        .filter(move |m| m.name.contains(&lower_search))
 }
 
 /// State for adding a combatant to the combat.
@@ -259,12 +260,8 @@ impl AddCombatant {
                     AfterKeyInner::Forward(event) => {
                         match event.code {
                             // TODO: scrolling not implemented
-                            KeyCode::Up => {
-                                let monster_count = query_monsters(self.search.as_str()).count();
-                                *selected = selected.checked_sub(1)
-                                    .or(monster_count.checked_sub(1))
-                                    .unwrap_or(0);
-                            },
+                            KeyCode::Up => *selected = selected.checked_sub(1)
+                                .unwrap_or_else(|| query_monsters(self.search.as_str()).count().saturating_sub(1)),
                             KeyCode::Down => {
                                 let monster_count = query_monsters(self.search.as_str()).count();
                                 *selected += 1;

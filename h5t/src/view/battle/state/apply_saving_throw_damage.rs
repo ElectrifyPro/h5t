@@ -160,10 +160,10 @@ impl ApplySavingThrowDamage {
         let data = &self.combatants[new_idx];
         let save_value = data.save
             .map(|save| save.to_string())
-            .unwrap_or(String::new());
+            .unwrap_or_default();
         let save_mod = self.ability
             .map(|ability| save_modifier(ability, data.proficiencies, data.modifiers))
-            .unwrap_or(0);
+            .unwrap_or_default();
         self.saving_throw.set_value(save_value);
         self.saving_throw.set_prefix(fmt_dice_expr(save_mod));
     }
@@ -353,12 +353,12 @@ impl ApplySavingThrowDamage {
 
                     let save_mod = self.ability
                         .map(|ability| save_modifier(ability, data.proficiencies, data.modifiers))
-                        .unwrap_or(0);
+                        .unwrap_or_default();
                     Row::new([
                         Text::from(format!("{}", label)).bold(),
                         Text::raw(&data.name),
                         Text::raw(fmt_dice_expr(save_mod)),
-                        Text::raw(data.save.map(|save| save.to_string()).unwrap_or(String::new())),
+                        Text::raw(data.save.map(|save| save.to_string()).unwrap_or_default()),
                         match self.has_saved(data) {
                             HasSaved::Yes => Text::raw("PASS").fg(roll_save_theme.success),
                             HasSaved::Unknown => Text::raw("????").fg(roll_save_theme.dim().foreground),
@@ -369,7 +369,7 @@ impl ApplySavingThrowDamage {
                 }),
             [
                 2,
-                2 + longest_combatant_name.unwrap_or(0).max("Combatant".len()) as u16,
+                2 + longest_combatant_name.unwrap_or_default().max("Combatant".len()) as u16,
                 2 + "Expression".len() as u16,
                 2 + "Roll".len() as u16,
                 2 + "Result".len() as u16,

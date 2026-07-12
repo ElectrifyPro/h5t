@@ -51,8 +51,8 @@ impl<'a> InputInner<'a> {
 
 impl SizedWidget for InputInner<'_> {
     fn width(&self) -> u16 {
-        let prefix = self.prefix.unwrap_or("");
-        let suffix = self.suffix.unwrap_or("");
+        let prefix = self.prefix.unwrap_or_default();
+        let suffix = self.suffix.unwrap_or_default();
 
         let mut inner_width = self.max_length;
         if !prefix.is_empty() {
@@ -78,8 +78,8 @@ impl Widget for InputInner<'_> {
             THEME.dim()
         };
 
-        let prefix = self.prefix.unwrap_or("");
-        let suffix = self.suffix.unwrap_or("");
+        let prefix = self.prefix.unwrap_or_default();
+        let suffix = self.suffix.unwrap_or_default();
 
         // if the prefix / suffix exists, reserve enough space for it + 2 extra separator cells that
         // separate the prefix / suffix between the input. otherwise, the entire space is empty

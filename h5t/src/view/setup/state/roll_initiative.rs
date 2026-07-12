@@ -88,7 +88,7 @@ impl RollInitiative {
         let data = &self.combatants[new_idx];
         let initiative_value = data.initiative
             .map(|save| save.to_string())
-            .unwrap_or(String::new());
+            .unwrap_or_default();
         self.initiative.set_value(initiative_value);
         self.initiative.set_prefix(fmt_dice_expr(data.dexterity));
     }
@@ -123,13 +123,13 @@ impl RollInitiative {
                         Text::from(format!("{}", label)).bold(),
                         Text::raw(&data.name),
                         Text::raw(fmt_dice_expr(data.dexterity)),
-                        Text::raw(data.initiative.map(|value| value.to_string()).unwrap_or(String::new())),
+                        Text::raw(data.initiative.map(|value| value.to_string()).unwrap_or_default()),
                     ])
                         .style(style)
                 }),
             [
                 2,
-                2 + longest_combatant_name.unwrap_or(0).max("Combatant".len()) as u16,
+                2 + longest_combatant_name.unwrap_or_default().max("Combatant".len()) as u16,
                 2 + "Expression".len() as u16,
                 2 + "Initiative".len() as u16,
             ],

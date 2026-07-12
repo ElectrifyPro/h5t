@@ -5,7 +5,6 @@ use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
 use state::{AddCombatant, AfterKey, AssignGroup, NewGroup, RollInitiative, State};
-use std::collections::HashMap;
 
 /// The setup data for the battle.
 #[derive(Debug)]

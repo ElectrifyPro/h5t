@@ -12,7 +12,7 @@ pub struct ResourcePool(pub(crate) HashMap<Id, i32>);
 impl ResourcePool {
     /// Get the count for a specified resource.
     pub fn get(&self, id: &Id) -> i32 {
-        self.0.get(id).copied().unwrap_or(0)
+        self.0.get(id).copied().unwrap_or_default()
     }
 
     /// Get a mutable reference to the count for a specified resource.

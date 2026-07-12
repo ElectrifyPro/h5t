@@ -27,7 +27,7 @@ fn combatant_table(widget: Setup) -> Table {
             Text::from(
                 combatant.initiative
                     .map(|init| init.to_string())
-                    .unwrap_or(String::from("")),
+                    .unwrap_or_default(),
             ),
             HitPoints::new(combatant).line().into(),
         ])

@@ -111,7 +111,7 @@ impl<'a, W> Popup<'a, W> {
 impl<W: SizedWidget> Widget for Popup<'_, W> {
     fn render(self, target_area: Rect, buf: &mut Buffer) {
         let inner_widget_size = self.inner_widget.size();
-        let prompt = self.prompt.unwrap_or("");
+        let prompt = self.prompt.unwrap_or_default();
 
         let block_width = {
             // top left border (1) + top right border (1) = +2
