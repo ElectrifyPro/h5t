@@ -13,8 +13,8 @@ fn combatant_table(widget: Setup) -> Table {
         Row::new([
             Text::from(combatant.name()),
             Text::styled(
-                &combatant.group,
-                if let Some((_, color)) = group_colors.iter().find(|data| data.0 == combatant.group) {
+                combatant.group.as_deref().unwrap_or_default(),
+                if let Some((_, color)) = group_colors.iter().find(|data| Some(&data.0) == combatant.group.as_ref()) {
                     *color
                 } else {
                     THEME.foreground.into()

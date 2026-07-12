@@ -18,7 +18,7 @@ fn main() {
         .cloned()
         .map(|m| {
             let mut combatant = Combatant::from(m);
-            combatant.group = String::from("Monsters");
+            combatant.group = Some(String::from("Monsters"));
             combatant
         })
         .collect::<Vec<_>>();
@@ -28,7 +28,7 @@ fn main() {
     let pcs = vec![
         Combatant {
             initiative: None,
-            group: String::from("Players"),
+            group: Some(String::from("Players")),
             kind: CombatantKind::Character(Character {
                 index: String::from("astarion"),
                 name: String::from("Astarion"),

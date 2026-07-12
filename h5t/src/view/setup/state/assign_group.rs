@@ -27,13 +27,7 @@ struct CombatantData {
     name: String,
 
     /// The combatant's assigned group.
-    group: String,
-}
-
-impl std::fmt::Display for CombatantData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
-    }
+    group: Option<String>,
 }
 
 impl CombatantData {
@@ -117,7 +111,7 @@ impl AssignGroup {
                 }
 
                 // if all combatants have a group set, we can stop here
-                if self.combatants.iter().all(|data| !data.group.is_empty()) {
+                if self.combatants.iter().all(|data| data.group.is_some()) {
                     return AfterKey::Exit;
                 } else {
                     // go back and choose a new group
@@ -130,12 +124,16 @@ impl AssignGroup {
                     return AfterKey::Stay;
                 };
 
-                if let Some(combatant) = self.combatants.get_mut(idx) {
-                    if combatant.group == self.group_to_assign {
-                        combatant.group = String::new();
-                    } else {
-                        combatant.group = self.group_to_assign.clone();
-                    }
+                let Some(combatant) = self.combatants.get_mut(idx) else {
+                    return AfterKey::Exit;
+                };
+
+                if let Some(group) = &combatant.group && *group == self.group_to_assign {
+                    // reset to previous group (can also be `None`)
+                    combatant.group = inner.combatants[combatant.idx].group.clone();
+                } else {
+                    // assign the group
+                    combatant.group = Some(self.group_to_assign.clone());
                 }
             },
             _ => (),
@@ -165,7 +163,7 @@ impl AssignGroup {
 
         let selected_combatants = self.combatants
             .iter()
-            .filter(|data| !self.group_to_assign.is_empty() && data.group == self.group_to_assign)
+            .filter(|data| data.group.as_ref() == Some(&self.group_to_assign))
             .cloned()
             .collect::<Vec<_>>();
 
@@ -175,7 +173,7 @@ impl AssignGroup {
             |_: usize, _: &CombatantData| true,
             infer(|_: usize, combatant: &CombatantData| Text::styled(
                 &combatant.name,
-                if let Some((_, color)) = self.group_colors.iter().find(|data| *data.0 == combatant.group) {
+                if let Some((_, color)) = self.group_colors.iter().find(|data| Some(data.0) == combatant.group.as_ref()) {
                     *color
                 } else {
                     THEME.foreground.into()
