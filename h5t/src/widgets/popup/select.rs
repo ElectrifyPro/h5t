@@ -23,7 +23,6 @@ pub struct Select<'a, T> {
 
 impl<'a, T> Select<'a, T> {
     /// Create a [`Select`] popup with the given options and an optional preselected option.
-    #[allow(dead_code)] // NOTE: included for completeness
     pub fn with_options(
         prompt: &'a str,
         options: &'a [T],
@@ -41,7 +40,7 @@ impl<'a, E: SelectableEnum + 'static> Select<'a, E> {
     }
 }
 
-impl<T: SelectableEnum> Widget for Select<'_, T> {
+impl<T: PartialEq + std::fmt::Display> Widget for Select<'_, T> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let widget = SelectableTable::<T, _, _>::with_options(
             self.options,

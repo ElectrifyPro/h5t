@@ -1,7 +1,11 @@
 pub mod add_combatant;
+pub mod assign_group;
+pub mod new_group;
 pub mod roll_initiative;
 
 pub use add_combatant::AddCombatant;
+pub use assign_group::AssignGroup;
+pub use new_group::NewGroup;
 pub use roll_initiative::RollInitiative;
 
 /// What to do after handling a key event.
@@ -42,11 +46,11 @@ macro_rules! create_state {
             pub fn handle_key(
                 &mut self,
                 key: crossterm::event::KeyEvent,
-                combatants: &mut Vec<h5t_core::Combatant>,
+                inner: &mut crate::view::setup::SetupInner,
             ) -> AfterKey {
                 match self {
                     $(
-                        Self::$state_name(state) => state.handle_key(key, combatants),
+                        Self::$state_name(state) => state.handle_key(key, inner),
                     )+
                 }
             }
@@ -56,5 +60,7 @@ macro_rules! create_state {
 
 create_state!(
     "Adding a combatant to the combat.", AddCombatant;
+    "Assigning combatants to groups.", AssignGroup;
+    "Creating a new group combatants can be assigned to.", NewGroup;
     "Rolling initiative for each combatant.", RollInitiative;
 );

@@ -3,7 +3,7 @@ use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
     selectable::SelectableEnum,
     theme::THEME,
-    view::LABELS,
+    view::{LABELS, setup::SetupInner},
     widgets::{ability_scores::score_to_color, popup::Select},
 };
 use crossterm::event::{KeyCode, KeyEvent};
@@ -11,7 +11,6 @@ use h5t_core::{
     ability::Score,
     monster::MONSTERS,
     Ability,
-    Combatant,
     CombatantKind,
     Monster,
     score_to_modifier,
@@ -206,7 +205,7 @@ impl AddCombatant {
     }
 
     /// Handle a key event and apply any needed changes to the combatant list.
-    pub fn handle_key(&mut self, key: KeyEvent, combatants: &mut Vec<Combatant>) -> AfterKey {
+    pub fn handle_key(&mut self, key: KeyEvent, inner: &mut SetupInner) -> AfterKey {
         match &mut self.step {
             Step::ChooseKind(kind) => match key.code {
                 KeyCode::Esc => AfterKey::Exit,
@@ -251,7 +250,7 @@ impl AddCombatant {
                         // add monster, but leave window open so more can be added
                         let maybe_monster = query_monsters(self.search.as_str()).nth(*selected);
                         if let Some(monster) = maybe_monster {
-                            combatants.push(CombatantKind::Monster(monster.clone()).into());
+                            inner.combatants.push(CombatantKind::Monster(monster.clone()).into());
                         }
                     },
                     AfterKeyInner::Cancel => {

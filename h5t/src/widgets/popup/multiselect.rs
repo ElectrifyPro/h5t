@@ -24,7 +24,6 @@ pub struct Multiselect<'a, T> {
 
 impl<'a, T> Multiselect<'a, T> {
     /// Create a [`Multiselect`] popup with the given options and selection state.
-    #[allow(dead_code)] // NOTE: included for completeness
     pub fn with_options(
         prompt: &'a str,
         options: &'a [T],
@@ -42,7 +41,7 @@ impl<'a, E: SelectableEnum + 'static> Multiselect<'a, E> {
     }
 }
 
-impl<T: SelectableEnum> Widget for Multiselect<'_, T> {
+impl<T: Eq + std::hash::Hash + std::fmt::Display> Widget for Multiselect<'_, T> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let widget = SelectableTable::<T, _, _>::with_options(
             self.options,

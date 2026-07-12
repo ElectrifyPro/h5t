@@ -1,13 +1,25 @@
-use crate::{theme::THEME, widgets::{ability_scores::score_to_color, HitPoints}};
+use crate::{
+    theme::THEME,
+    view::setup::SetupInner,
+    widgets::{ability_scores::score_to_color, HitPoints},
+};
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::*};
 
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
 fn combatant_table(widget: Setup) -> Table {
     /// Builds a table [`Row`] for a combatant.
-    fn combatant_row(combatant: &Combatant) -> Row<'_> {
+    fn combatant_row<'a>(group_colors: &'a [(String, Color)], combatant: &'a Combatant) -> Row<'a> {
         Row::new([
             Text::from(combatant.name()),
+            Text::styled(
+                &combatant.group,
+                if let Some((_, color)) = group_colors.iter().find(|data| data.0 == combatant.group) {
+                    *color
+                } else {
+                    THEME.foreground.into()
+                },
+            ),
             Text::styled(
                 format!("{:+}", combatant.scores().modifiers().dexterity),
                 score_to_color(combatant.scores().dexterity),
@@ -22,12 +34,12 @@ fn combatant_table(widget: Setup) -> Table {
     }
 
     Table::new(
-        widget.combatants.iter()
+        widget.inner.combatants.iter()
             .skip(widget.scroll_index)
             .map(|combatant| {
                 let is_selected = false;
 
-                let row = combatant_row(combatant);
+                let row = combatant_row(&widget.inner.groups, combatant);
                 let mut style = Style::default().fg(THEME.foreground.into());
 
                 let mut bg_color = None;
@@ -44,6 +56,7 @@ fn combatant_table(widget: Setup) -> Table {
             }),
         [
             Constraint::Fill(2), // name
+            Constraint::Fill(1), // group
             Constraint::Fill(1), // dexterity modifier
             Constraint::Fill(1), // initiative roll
             Constraint::Fill(1), // hp / max hp
@@ -52,6 +65,7 @@ fn combatant_table(widget: Setup) -> Table {
         .header(
             Row::new([
                 Text::from("Name").centered(),
+                Text::from("Group").centered(),
                 Text::from("DEX Mod").centered(),
                 Text::from("Initiative").centered(),
                 Text::from("HP / Max HP").centered(),
@@ -64,8 +78,8 @@ fn combatant_table(widget: Setup) -> Table {
 /// The widget used to used to setup and add combatants, and roll initiative order.
 #[derive(Debug)]
 pub struct Setup<'a> {
-    /// List of combatants to add to the battle in no particular order.
-    pub combatants: &'a [Combatant],
+    /// The setup data for the battle.
+    pub inner: &'a SetupInner,
 
     /// Index of the first combatant listed in the tracker, used to scroll through the initiative
     /// tracker.
@@ -74,8 +88,8 @@ pub struct Setup<'a> {
 
 impl<'a> Setup<'a> {
     /// Create a new [`Setup`] widget.
-    pub fn new(combatants: &'a [Combatant], scroll_index: usize) -> Self {
-        Self { combatants, scroll_index }
+    pub fn new(inner: &'a SetupInner, scroll_index: usize) -> Self {
+        Self { inner, scroll_index }
     }
 }
 
@@ -96,7 +110,7 @@ impl Widget for Setup<'_> {
             .spacing(1)
             .areas(area);
 
-        Line::from(format!("# combatants: {}", self.combatants.len()))
+        Line::from(format!("# combatants: {}", self.inner.combatants.len()))
             .style(Style::default().fg(THEME.foreground.into()).bold())
             .render(stat_line, buf);
 

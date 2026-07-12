@@ -1,18 +1,29 @@
 mod state;
 
-use crate::{theme::THEME, widgets::{Setup as SetupWidget}};
+use crate::{theme::THEME, widgets::Setup as SetupWidget};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
-use state::{AddCombatant, AfterKey, RollInitiative, State};
+use state::{AddCombatant, AfterKey, AssignGroup, NewGroup, RollInitiative, State};
+use std::collections::HashMap;
+
+/// The setup data for the battle.
+#[derive(Debug)]
+pub struct SetupInner {
+    /// Groups that combatants can be assigned to.
+    pub groups: Vec<(String, Color)>,
+
+    /// List of combatants to add to the battle in no particular order.
+    pub combatants: Vec<Combatant>,
+}
 
 /// The setup view, used to setup and add combatants, and roll initiative order.
 pub struct Setup<B: Backend> {
     /// The terminal to draw to.
     pub terminal: Terminal<B>,
 
-    /// List of combatants to add to the battle in no particular order.
-    combatants: Vec<Combatant>,
+    /// The setup data for the battle.
+    inner: SetupInner,
 
     /// The currently active state.
     state: Option<State>,
@@ -33,7 +44,10 @@ impl<B: Backend> Setup<B> {
     pub fn new(terminal: Terminal<B>) -> Self {
         Self {
             terminal,
-            combatants: vec![],
+            inner: SetupInner {
+                groups: vec![],
+                combatants: vec![],
+            },
             state: None,
             scroll_index: 0,
         }
@@ -51,7 +65,7 @@ impl<B: Backend> Setup<B> {
 
             // if a state is active, let it handle the input
             if let Some(mut state) = self.state.take() {
-                match state.handle_key(key, &mut self.combatants) {
+                match state.handle_key(key, &mut self.inner) {
                     AfterKey::Exit => (),
                     AfterKey::Stay => self.state = Some(state),
                 }
@@ -60,26 +74,29 @@ impl<B: Backend> Setup<B> {
 
             match key.code {
                 KeyCode::Up => self.scroll_index = self.scroll_index.saturating_sub(1),
-                KeyCode::Down => if self.scroll_index < self.combatants.len() {
+                KeyCode::Down => if self.scroll_index < self.inner.combatants.len() {
                     self.scroll_index += 1;
                 },
                 KeyCode::Char('a') => {
                     self.state = Some(State::AddCombatant(AddCombatant::new()));
                 },
+                KeyCode::Char('g') => {
+                    self.state = Some(State::NewGroup(NewGroup::new()));
+                },
+                KeyCode::Char('G') => {
+                    self.state = Some(State::AssignGroup(AssignGroup::new(&self.inner)));
+                },
                 KeyCode::Char('r') => {
-                    let data_iter = self.combatants
-                        .iter()
-                        .enumerate();
-                    self.state = Some(State::RollInitiative(RollInitiative::new(data_iter)));
+                    self.state = Some(State::RollInitiative(RollInitiative::new(&self.inner)));
                 },
                 // roll initiative for all combatants
-                KeyCode::Char('R') => for combatant in self.combatants.iter_mut() {
+                KeyCode::Char('R') => for combatant in self.inner.combatants.iter_mut() {
                     let roll = rand::random::<u32>() % 20 + 1;
                     let dex_mod = combatant.scores().modifiers().dexterity;
                     combatant.initiative = Some(roll as i32 + dex_mod);
                 },
                 KeyCode::Char('s') => {
-                    self.combatants.sort_by(|a, b| {
+                    self.inner.combatants.sort_by(|a, b| {
                         match (a.initiative, b.initiative) {
                             // sort combatants with no initiative *before* those with a set
                             // initiative to make it obvious to user
@@ -108,7 +125,7 @@ impl<B: Backend> Setup<B> {
             );
 
             frame.render_widget(
-                SetupWidget::new(&self.combatants, self.scroll_index),
+                SetupWidget::new(&self.inner, self.scroll_index),
                 frame.area(),
             );
 

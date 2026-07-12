@@ -16,7 +16,11 @@ fn main() {
     let mut combatants = MONSTERS
         .iter()
         .cloned()
-        .map(|m| CombatantKind::Monster(m).into())
+        .map(|m| {
+            let mut combatant = Combatant::from(m);
+            combatant.group = String::from("Monsters");
+            combatant
+        })
         .collect::<Vec<_>>();
 
     use h5t_core::{ability::{Proficiencies, Skill}, monster::ArmorClass, resource::ResourcePool, speed::Speed, Ability, Character, Combatant};
@@ -24,6 +28,7 @@ fn main() {
     let pcs = vec![
         Combatant {
             initiative: None,
+            group: String::from("Players"),
             kind: CombatantKind::Character(Character {
                 index: String::from("astarion"),
                 name: String::from("Astarion"),

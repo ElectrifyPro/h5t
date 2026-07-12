@@ -38,6 +38,12 @@ pub struct Combatant {
     /// order at any time.
     pub initiative: Option<i32>,
 
+    /// Identifier for the group the combatant is in.
+    ///
+    /// This can be used to clearly distinguish between players and NPCs, teams involved in a
+    /// combat, etc.
+    pub group: String,
+
     /// The kind of creature the combatant is.
     pub kind: CombatantKind,
 
@@ -137,6 +143,7 @@ impl From<Character> for Combatant {
     fn from(character: Character) -> Self {
         Self {
             initiative: None,
+            group: String::new(),
             hit_points: character.hit_points,
             conditions: Vec::new(),
             kind: character.into(),
@@ -155,6 +162,7 @@ impl From<Monster> for Combatant {
     fn from(monster: Monster) -> Self {
         Self {
             initiative: None,
+            group: String::new(),
             hit_points: monster.hit_points,
             conditions: Vec::new(),
             kind: monster.into(),

@@ -1,7 +1,7 @@
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
     theme::THEME,
-    view::LABELS,
+    view::{LABELS, setup::SetupInner},
     widgets::{popup::Popup, SizedTable},
 };
 use crossterm::event::{KeyCode, KeyEvent};
@@ -25,7 +25,7 @@ fn fmt_dice_expr(modifier: i32) -> String {
 
 /// Combatant data needed.
 #[derive(Clone, Debug, Default)]
-pub struct CombatantData {
+struct CombatantData {
     /// The index of the combatant in the setup view.
     idx: usize,
 
@@ -41,7 +41,7 @@ pub struct CombatantData {
 
 impl CombatantData {
     /// Create a [`CombatantData`] with a combatant.
-    pub fn new(idx: usize, combatant: &Combatant) -> Self {
+    fn new((idx, combatant): (usize, &Combatant)) -> Self {
         Self {
             idx,
             name: combatant.name().to_string(),
@@ -50,7 +50,6 @@ impl CombatantData {
         }
     }
 }
-
 
 /// State for rolling initiative for each combatant.
 #[derive(Clone, Debug)]
@@ -67,13 +66,14 @@ pub struct RollInitiative {
 }
 
 impl RollInitiative {
-    /// Create a [`RollInitiative`] state with the given combatant data.
-    pub fn new<'a>(data: impl Iterator<Item = (usize, &'a Combatant)>) -> Self {
-        let combatants = data
-            .map(|(idx, combatant)| CombatantData::new(idx, combatant))
-            .collect();
+    /// Create a [`RollInitiative`] state with the given setup state.
+    pub fn new(inner: &SetupInner) -> Self {
         Self {
-            combatants,
+            combatants: inner.combatants
+                .iter()
+                .enumerate()
+                .map(CombatantData::new)
+                .collect(),
             initiative: GetInput::new("Initiative", 3, Charset::Numeric)
                 .prefix("d20 ="),
             selected_idx: 0,
@@ -150,7 +150,7 @@ impl RollInitiative {
     }
 
     /// Handle a key event and apply any needed changes to the combatant list.
-    pub fn handle_key(&mut self, key: KeyEvent, combatants: &mut Vec<Combatant>) -> AfterKey {
+    pub fn handle_key(&mut self, key: KeyEvent, inner: &mut SetupInner) -> AfterKey {
         match self.initiative.handle_key(key) {
             AfterKeyInner::Handled => {
                 let Ok(save) = self.initiative.get_parsed() else {
@@ -167,7 +167,7 @@ impl RollInitiative {
                 // if all combatants have an initiative value, we can stop here
                 if self.combatants.iter().all(|data| data.initiative.is_some()) {
                     for data in self.combatants.iter() {
-                        combatants[data.idx].initiative = data.initiative;
+                        inner.combatants[data.idx].initiative = data.initiative;
                     }
                     return AfterKey::Exit;
                 } else {
