@@ -1,4 +1,8 @@
-use crate::{selectable::SelectableEnum, theme::THEME, widgets::{SelectableTable, popup::Popup}};
+use crate::{
+    selectable::SelectableEnum,
+    theme::THEME,
+    widgets::{SelectableTable, popup::Popup, selectable_table::infer},
+};
 use ratatui::prelude::*;
 use std::collections::HashSet;
 
@@ -43,10 +47,11 @@ impl<'a, E: SelectableEnum + 'static> Multiselect<'a, E> {
 
 impl<T: Eq + std::hash::Hash + std::fmt::Display> Widget for Multiselect<'_, T> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let widget = SelectableTable::<T, _, _>::with_options(
+        let widget = SelectableTable::with_options(
             self.options,
             |_, item: &T| self.selected.contains(item),
             |_, _: &T| self.active,
+            infer(|_, item: &T| Text::from(item.to_string())),
         );
         let prompt = format!("{} ({}/{})", self.prompt, self.selected.len(), self.options.len());
         let popup = Popup::new(THEME.foreground, Some(&prompt), self.active, widget);

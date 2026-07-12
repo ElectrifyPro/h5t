@@ -1,10 +1,20 @@
 use crate::{selectable::SelectableEnum, theme::THEME, view::LABELS, widgets::popup::SizedWidget};
-use std::fmt::Display;
 use ratatui::{prelude::*, widgets::*};
+
+/// FIXME: when we attempt to write a closure for use as the `render_fn` in `SelectableTable`, Rust
+/// has trouble inferring that `Text` is supposed to borrow from `T`. but if you wrap it in this,
+/// it'll work
+///
+/// you can do it compiler :) :)
+pub(crate) fn infer<T, F>(f: F) -> F
+where F: Fn(usize, &T) -> Text,
+{
+    f
+}
 
 /// A table widget that displays a list of options, and supports highlighting any number of options
 /// as selected.
-pub struct SelectableTable<'a, T, S, A> {
+pub struct SelectableTable<'a, T, S, A, F> {
     /// The list of options to show.
     options: &'a [T],
 
@@ -21,33 +31,40 @@ pub struct SelectableTable<'a, T, S, A> {
     /// It takes two parameters: a `usize` representing the index of the given option in the parent
     /// list, and a reference `&T` to the option. Either/or can be used as needed.
     active_fn: A,
+
+    /// A function that renders the option as a [`Text`] widget.
+    ///
+    /// It takes two parameters: a `usize` representing the index of the given option in the parent
+    /// list, and a reference `&T` to the option. Either/or can be used as needed.
+    render_fn: F,
 }
 
-impl<'a, T, S, A> SelectableTable<'a, T, S, A> {
+impl<'a, T, S, A, F> SelectableTable<'a, T, S, A, F> {
     /// Create a [`SelectableTable`] with the given options.
-    pub fn with_options(options: &'a [T], selected_fn: S, active_fn: A) -> Self {
-        Self { options, selected_fn, active_fn }
+    pub fn with_options(options: &'a [T], selected_fn: S, active_fn: A, render_fn: F) -> Self {
+        Self { options, selected_fn, active_fn, render_fn }
     }
 }
 
-impl<E: SelectableEnum, S, A> SelectableTable<'static, E, S, A> {
+impl<E: SelectableEnum, S, A, F> SelectableTable<'static, E, S, A, F> {
     /// Create a [`SelectableTable`] from a [`SelectableEnum`].
     #[allow(dead_code)] // NOTE: included for completeness
-    pub fn with_enum(selected_fn: S, active_fn: A) -> Self {
-        Self { options: E::variants(), selected_fn, active_fn }
+    pub fn with_enum(selected_fn: S, active_fn: A, render_fn: F) -> Self {
+        Self { options: E::variants(), selected_fn, active_fn, render_fn }
     }
 }
 
-impl<'a, T, S, A> SizedWidget for SelectableTable<'a, T, S, A>
+impl<'a, T, S, A, F> SizedWidget for SelectableTable<'a, T, S, A, F>
 where
-    T: Display,
     S: Fn(usize, &T) -> bool,
     A: Fn(usize, &T) -> bool,
+    F: Fn(usize, &T) -> Text,
 {
     fn width(&self) -> u16 {
         let Some(longest_variant_length) = self.options
             .iter()
-            .map(|v| v.to_string().len())
+            .enumerate()
+            .map(|(idx, v)| (self.render_fn)(idx, v).width())
             .max() else {
             // this makes no sense and should also not be possible
             return 0;
@@ -61,11 +78,11 @@ where
     }
 }
 
-impl<'a, T, S, A> Widget for SelectableTable<'a, T, S, A>
+impl<'a, T, S, A, F> Widget for SelectableTable<'a, T, S, A, F>
 where
-    T: Display,
     S: Fn(usize, &T) -> bool,
     A: Fn(usize, &T) -> bool,
+    F: Fn(usize, &T) -> Text,
 {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let table = Table::new(
@@ -88,7 +105,7 @@ where
 
                     Row::new(vec![
                         Text::styled(label.to_string(), Modifier::BOLD),
-                        Text::from(variant.to_string()),
+                        (self.render_fn)(idx, variant),
                     ]).style(style)
                 }),
             [

@@ -1,4 +1,9 @@
-use crate::{Tracker, theme::THEME, view::LABELS, widgets::{SelectableTable, popup::Popup}};
+use crate::{
+    theme::THEME,
+    view::LABELS,
+    widgets::{SelectableTable, popup::Popup, selectable_table::infer},
+    Tracker,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::{resource::ResourcePool, Action};
 use ratatui::prelude::*;
@@ -29,7 +34,7 @@ impl SelectAction {
 
     /// Draw the state to the given [`Frame`].
     pub fn draw(&self, frame: &mut Frame) {
-        let widget = SelectableTable::<Action, _, _>::with_options(
+        let widget = SelectableTable::with_options(
             &self.actions,
             |idx, _: &Action| if let Some(selected_idx) = self.selected {
                 selected_idx == idx
@@ -37,6 +42,7 @@ impl SelectAction {
                 false
             },
             |_, action: &Action| self.pool.can_perform(action.costs()),
+            infer(|_, action: &Action| Text::raw(&action.name)),
         );
 
         let area = frame.area();

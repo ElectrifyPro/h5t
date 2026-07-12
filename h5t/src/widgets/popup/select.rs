@@ -1,4 +1,8 @@
-use crate::{selectable::SelectableEnum, theme::THEME, widgets::{popup::Popup, SelectableTable}};
+use crate::{
+    selectable::SelectableEnum,
+    theme::THEME,
+    widgets::{SelectableTable, popup::Popup, selectable_table::infer},
+};
 use ratatui::prelude::*;
 
 /// A popup that displays a selection prompt for an enum. Like [`Multiselect`], but for a single
@@ -42,7 +46,7 @@ impl<'a, E: SelectableEnum + 'static> Select<'a, E> {
 
 impl<T: PartialEq + std::fmt::Display> Widget for Select<'_, T> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let widget = SelectableTable::<T, _, _>::with_options(
+        let widget = SelectableTable::with_options(
             self.options,
             |_, item: &T| if let Some(selected_t) = self.selected {
                 selected_t == item
@@ -50,6 +54,7 @@ impl<T: PartialEq + std::fmt::Display> Widget for Select<'_, T> {
                 false
             },
             |_, _: &T| self.active,
+            infer(|_, item: &T| Text::from(item.to_string())),
         );
 
         let popup = Popup::new(THEME.foreground, Some(self.prompt), self.active, widget);

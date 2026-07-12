@@ -1,4 +1,8 @@
-use crate::{view::{LABELS, setup::SetupInner}, widgets::popup::{Multiselect, Select}};
+use crate::{
+    theme::THEME,
+    view::{LABELS, setup::SetupInner},
+    widgets::{SelectableTable, popup::{Popup, Select}, selectable_table::infer},
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::Combatant;
 use ratatui::{layout::Flex, prelude::*};
@@ -127,7 +131,11 @@ impl AssignGroup {
                 };
 
                 if let Some(combatant) = self.combatants.get_mut(idx) {
-                    combatant.group = self.group_to_assign.clone();
+                    if combatant.group == self.group_to_assign {
+                        combatant.group = String::new();
+                    } else {
+                        combatant.group = self.group_to_assign.clone();
+                    }
                 }
             },
             _ => (),
@@ -159,13 +167,24 @@ impl AssignGroup {
             .iter()
             .filter(|data| !self.group_to_assign.is_empty() && data.group == self.group_to_assign)
             .cloned()
-            .collect();
-        frame.render_widget(Multiselect::with_options(
-            "Assign combatants",
+            .collect::<Vec<_>>();
+
+        let widget = SelectableTable::with_options(
             &self.combatants,
-            &selected_combatants,
-            self.field == Field::Combatants,
-        ), combatants);
+            |_: usize, combatant: &CombatantData| selected_combatants.contains(combatant),
+            |_: usize, _: &CombatantData| true,
+            infer(|_: usize, combatant: &CombatantData| Text::styled(
+                &combatant.name,
+                if let Some((_, color)) = self.group_colors.iter().find(|data| *data.0 == combatant.group) {
+                    *color
+                } else {
+                    THEME.foreground.into()
+                },
+            ))
+        );
+        let prompt = format!("Assign combatants ({}/{})", selected_combatants.len(), self.combatants.len());
+        let popup = Popup::new(THEME.foreground, Some(&prompt), self.field == Field::Combatants, widget);
+        popup.render(combatants, frame.buffer_mut());
     }
 
     /// Handle a key event and apply any needed changes to the combatant list.
