@@ -1,6 +1,6 @@
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
-    theme::THEME,
+    theme::{Rgb, THEME},
     view::setup::SetupInner,
     widgets::{popup::Popup, ColorPicker},
 };
@@ -14,8 +14,8 @@ pub struct NewGroup {
     /// Helper for the group name input.
     group_name: GetInput<String>,
 
-    /// The RGB color of the group.
-    color: (u8, u8, u8),
+    /// The color of the group.
+    color: Rgb,
 
     /// The index of the RGB color field to modify.
     color_idx: u8,
@@ -26,7 +26,7 @@ impl NewGroup {
     pub fn new() -> Self {
         Self {
             group_name: GetInput::new("Group name", 20, Charset::All),
-            color: (255, 255, 255),
+            color: Rgb(255, 255, 255),
             color_idx: 0,
         }
     }
@@ -87,7 +87,7 @@ impl NewGroup {
         match self.group_name.handle_key(key) {
             AfterKeyInner::Handled => (),
             AfterKeyInner::Submit(group_name) => {
-                inner.groups.push((group_name, Color::from(self.color)));
+                inner.groups.insert(group_name, self.color);
                 return AfterKey::Exit;
             },
             AfterKeyInner::Cancel => return AfterKey::Exit,

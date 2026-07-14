@@ -1,11 +1,11 @@
-use crate::widgets::popup::SizedWidget;
+use crate::{theme::Rgb, widgets::popup::SizedWidget};
 use ratatui::{layout::Offset, prelude::*};
 
 /// A widget to pick an RGB color.
 #[derive(Debug)]
 pub struct ColorPicker {
     /// The RGB color.
-    color: (u8, u8, u8),
+    color: Rgb,
 
     /// The width of the gradient bars.
     gradient_width: u16,
@@ -13,7 +13,7 @@ pub struct ColorPicker {
 
 impl ColorPicker {
     /// Create a new [`ColorPicker`] widget with the given selected color.
-    pub fn new(color: (u8, u8, u8), gradient_width: u16) -> Self {
+    pub fn new(color: Rgb, gradient_width: u16) -> Self {
         Self { color, gradient_width }
     }
 
@@ -79,7 +79,7 @@ impl Widget for ColorPicker {
         // return a color channel value interpolated betweeen 0-255
         let lerp = |t: f32| (t * 255.0) as u8;
 
-        let (r, g, b) = self.color;
+        let Rgb(r, g, b) = self.color;
         self.render_channel(remainder_area, buf, 1, r, |t| Color::Rgb(lerp(t), g, b));
         self.render_channel(remainder_area, buf, 3, g, |t| Color::Rgb(r, lerp(t), b));
         self.render_channel(remainder_area, buf, 5, b, |t| Color::Rgb(r, g, lerp(t)));

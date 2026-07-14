@@ -1,5 +1,5 @@
 use crate::{
-    theme::THEME,
+    theme::{Rgb, THEME},
     view::{LABELS, setup::SetupInner},
     widgets::{SelectableTable, popup::{Popup, Select}, selectable_table::infer},
 };
@@ -48,7 +48,7 @@ pub struct AssignGroup {
     field: Field,
 
     /// Map of groups to their associated colors.
-    group_colors: HashMap<String, Color>,
+    group_colors: HashMap<String, Rgb>,
 
     /// The group names to choose from.
     group_names: Vec<String>,
@@ -65,10 +65,7 @@ impl AssignGroup {
     pub fn new(inner: &SetupInner) -> Self {
         Self {
             field: Field::default(),
-            group_colors: inner.groups
-                .iter()
-                .cloned()
-                .collect(),
+            group_colors: inner.groups.clone(),
             group_names: inner.groups
                 .iter()
                 .map(|(name, _)| name.to_string())
@@ -170,13 +167,20 @@ impl AssignGroup {
         let widget = SelectableTable::with_options(
             &self.combatants,
             |_: usize, combatant: &CombatantData| selected_combatants.contains(combatant),
-            |_: usize, _: &CombatantData| true,
+            |_: usize, _: &CombatantData| self.field == Field::Combatants,
             infer(|_: usize, combatant: &CombatantData| Text::styled(
                 &combatant.name,
-                if let Some((_, color)) = self.group_colors.iter().find(|data| Some(data.0) == combatant.group.as_ref()) {
-                    *color
-                } else {
-                    THEME.foreground.into()
+                {
+                    let main_color = combatant.group
+                        .as_ref()
+                        .and_then(|group| self.group_colors.get(group))
+                        .copied()
+                        .unwrap_or(THEME.foreground);
+                    if self.field == Field::Combatants {
+                        main_color
+                    } else {
+                        main_color.mix(THEME.background)
+                    }
                 },
             ))
         );

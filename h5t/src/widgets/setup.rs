@@ -1,24 +1,25 @@
 use crate::{
-    theme::THEME,
+    theme::{Rgb, THEME},
     view::setup::SetupInner,
     widgets::{ability_scores::score_to_color, HitPoints},
 };
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::*};
+use std::collections::HashMap;
 
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
 fn combatant_table(widget: Setup) -> Table {
     /// Builds a table [`Row`] for a combatant.
-    fn combatant_row<'a>(group_colors: &'a [(String, Color)], combatant: &'a Combatant) -> Row<'a> {
+    fn combatant_row<'a>(group_colors: &HashMap<String, Rgb>, combatant: &'a Combatant) -> Row<'a> {
         Row::new([
             Text::from(combatant.name()),
             Text::styled(
                 combatant.group.as_deref().unwrap_or_default(),
-                if let Some((_, color)) = group_colors.iter().find(|data| Some(&data.0) == combatant.group.as_ref()) {
-                    *color
-                } else {
-                    THEME.foreground.into()
-                },
+                combatant.group
+                    .as_ref()
+                    .and_then(|group| group_colors.get(group))
+                    .copied()
+                    .unwrap_or(THEME.foreground),
             ),
             Text::styled(
                 format!("{:+}", combatant.scores().modifiers().dexterity),

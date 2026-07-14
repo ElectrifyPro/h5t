@@ -34,6 +34,9 @@ pub struct SelectableTable<'a, T, S, A, F> {
 
     /// A function that renders the option as a [`Text`] widget.
     ///
+    /// NOTE: If the returned [`Text`] is styled (e.g. with custom colors), it will override the
+    /// styles set by [`SelectableTable`], such as the dimmed color when the [`Text`] is inactive.
+    ///
     /// It takes two parameters: a `usize` representing the index of the given option in the parent
     /// list, and a reference `&T` to the option. Either/or can be used as needed.
     render_fn: F,

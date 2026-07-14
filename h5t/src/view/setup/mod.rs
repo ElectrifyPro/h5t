@@ -1,16 +1,17 @@
 mod state;
 
-use crate::{theme::THEME, widgets::Setup as SetupWidget};
+use crate::{theme::{Rgb, THEME}, widgets::Setup as SetupWidget};
 use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
 use state::{AddCombatant, AfterKey, AssignGroup, NewGroup, RollInitiative, State};
+use std::collections::HashMap;
 
 /// The setup data for the battle.
 #[derive(Debug)]
 pub struct SetupInner {
     /// Groups that combatants can be assigned to.
-    pub groups: Vec<(String, Color)>,
+    pub groups: HashMap<String, Rgb>,
 
     /// List of combatants to add to the battle in no particular order.
     pub combatants: Vec<Combatant>,
@@ -44,7 +45,7 @@ impl<B: Backend> Setup<B> {
         Self {
             terminal,
             inner: SetupInner {
-                groups: vec![],
+                groups: HashMap::new(),
                 combatants: vec![],
             },
             state: None,
