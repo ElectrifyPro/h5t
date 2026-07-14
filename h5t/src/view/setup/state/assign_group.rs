@@ -1,7 +1,7 @@
 use crate::{
     theme::{Rgb, THEME},
     view::{LABELS, setup::SetupInner},
-    widgets::{SelectableTable, popup::{Popup, Select}, selectable_table::infer},
+    widgets::{SelectableTable, popup::Popup, selectable_table::infer},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::Combatant;
@@ -151,12 +151,24 @@ impl AssignGroup {
             .flex(Flex::Center)
             .areas(area);
 
-        frame.render_widget(Select::with_options(
-            "Select group",
+        let widget = SelectableTable::with_options(
             &self.group_names,
-            Some(&self.group_to_assign),
+            |_, name: &String| self.group_to_assign == *name,
+            |_, _: &String| self.field == Field::Groups,
+            infer(|_, name| Text::styled(
+                name,
+                self.group_colors.get(name)
+                    .copied()
+                    .unwrap_or(THEME.foreground),
+            ))
+        );
+        let popup = Popup::new(
+            THEME.foreground,
+            Some("Select group"),
             self.field == Field::Groups,
-        ), groups);
+            widget,
+        );
+        popup.render(groups, frame.buffer_mut());
 
         let selected_combatants = self.combatants
             .iter()
@@ -166,9 +178,9 @@ impl AssignGroup {
 
         let widget = SelectableTable::with_options(
             &self.combatants,
-            |_: usize, combatant: &CombatantData| selected_combatants.contains(combatant),
-            |_: usize, _: &CombatantData| self.field == Field::Combatants,
-            infer(|_: usize, combatant: &CombatantData| Text::styled(
+            |_, combatant: &CombatantData| selected_combatants.contains(combatant),
+            |_, _: &CombatantData| self.field == Field::Combatants,
+            infer(|_, combatant: &CombatantData| Text::styled(
                 &combatant.name,
                 {
                     let main_color = combatant.group
@@ -184,8 +196,17 @@ impl AssignGroup {
                 },
             ))
         );
-        let prompt = format!("Assign combatants ({}/{})", selected_combatants.len(), self.combatants.len());
-        let popup = Popup::new(THEME.foreground, Some(&prompt), self.field == Field::Combatants, widget);
+        let prompt = format!(
+            "Assign combatants ({}/{})",
+            selected_combatants.len(),
+            self.combatants.len(),
+        );
+        let popup = Popup::new(
+            THEME.foreground,
+            Some(&prompt),
+            self.field == Field::Combatants,
+            widget,
+        );
         popup.render(combatants, frame.buffer_mut());
     }
 

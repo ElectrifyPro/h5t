@@ -86,7 +86,7 @@ fn main() {
     // TODO: will crash if there are no combatants, please improve
     let Setup { terminal, inner, .. } = setup;
 
-    let mut tracker = Battle::new(terminal, Tracker::new(inner.combatants));
+    let mut tracker = Battle::new(terminal, Tracker::new(inner.combatants), inner.groups);
     tracker.run();
 
     ratatui::restore();

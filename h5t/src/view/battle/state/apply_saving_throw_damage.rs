@@ -1,7 +1,7 @@
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
     selectable::SelectableEnum,
-    theme::THEME,
+    theme::{Rgb, THEME},
     view::LABELS,
     widgets::{popup::{Popup, Select}, SizedTable},
     Tracker,
@@ -46,6 +46,9 @@ pub struct CombatantData {
     /// The combatant's name.
     name: String,
 
+    /// The combatant's group color, if any.
+    group_color: Option<Rgb>,
+
     /// The combatant's ability modifiers.
     modifiers: Ability<Modifier>,
 
@@ -58,10 +61,11 @@ pub struct CombatantData {
 
 impl CombatantData {
     /// Create a [`CombatantData`] with a combatant.
-    pub fn new(idx: usize, combatant: &Combatant) -> Self {
+    pub fn new(idx: usize, combatant: &Combatant, group_color: Option<Rgb>) -> Self {
         Self {
             idx,
             name: combatant.name().to_string(),
+            group_color,
             modifiers: combatant.scores().modifiers(),
             proficiencies: combatant.proficiencies(),
             save: None,
@@ -112,13 +116,21 @@ pub struct ApplySavingThrowDamage {
 
 impl ApplySavingThrowDamage {
     /// Create an [`ApplySavingThrowDamage`] state with the given combatant data.
-    pub fn new<'a>(data: impl Iterator<Item = (usize, &'a Combatant)>) -> Self {
-        let combatants = data
-            .map(|(idx, combatant)| CombatantData::new(idx, combatant))
-            .collect();
+    pub fn new<'a>(
+        combatants: impl Iterator<Item = (usize, &'a Combatant)>,
+        group_colors: &HashMap<String, Rgb>,
+    ) -> Self {
         Self {
             step: Step::default(),
-            combatants,
+            combatants: combatants
+                .map(|(idx, combatant)| CombatantData::new(
+                    idx,
+                    combatant,
+                    combatant.group
+                        .as_ref()
+                        .and_then(|group| group_colors.get(group).copied()),
+                ))
+                .collect(),
             save_dc: GetInput::new("Save DC", 5, Charset::Numeric),
             ability: None,
             saving_throw: GetInput::new("Saving throw", 3, Charset::Numeric)
@@ -351,12 +363,13 @@ impl ApplySavingThrowDamage {
                         style = style.bg(roll_save_theme.select.into());
                     }
 
+                    let combatant_group_color = data.group_color.unwrap_or(THEME.foreground);
                     let save_mod = self.ability
                         .map(|ability| save_modifier(ability, data.proficiencies, data.modifiers))
                         .unwrap_or_default();
                     Row::new([
                         Text::from(format!("{}", label)).bold(),
-                        Text::raw(&data.name),
+                        Text::styled(&data.name, combatant_group_color),
                         Text::raw(fmt_dice_expr(save_mod)),
                         Text::raw(data.save.map(|save| save.to_string()).unwrap_or_default()),
                         match self.has_saved(data) {

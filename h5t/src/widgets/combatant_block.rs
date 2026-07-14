@@ -1,17 +1,35 @@
 use crate::{
-    theme::THEME,
+    theme::{Rgb, THEME},
     widgets::{conditions::FullConditions, AbilityScores, HitPoints, fmt_speed},
 };
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::*};
 
-/// Creates a [`Text`] widget for displaying the combatant's name and whether they are dead.
-fn basic_status_text(combatant: &Combatant) -> Text<'_> {
-    if combatant.hit_points <= 0 {
-        Text::styled(format!("{} (Dead)", combatant.name()), Modifier::BOLD)
-    } else {
-        Text::styled(combatant.name(), Modifier::BOLD)
-    }.fg(THEME.foreground)
+/// Creates a [`Text`] widget for displaying the combatant's name, group, and whether they are dead.
+fn identifiers(group_color: Option<Rgb>, combatant: &Combatant) -> Text<'_> {
+    let group_color = group_color.unwrap_or(THEME.foreground);
+    Text::from(vec![
+        Line::from(if combatant.hit_points <= 0 {
+            vec![
+                Span::styled(combatant.name(), group_color),
+                Span::raw(" "),
+                Span::styled("(Dead)", THEME.dead),
+            ]
+        } else {
+            vec![
+                Span::styled(combatant.name(), group_color),
+            ]
+        }),
+        Line::from(vec![
+            Span::raw("Group: "),
+            if let Some(group) = &combatant.group {
+                Span::styled(group, group_color)
+            } else {
+                Span::styled("(none)", Modifier::ITALIC)
+            },
+        ]),
+    ])
+        .bold()
 }
 
 /// Creates a [`Table`] widget for displaying a monster's basic statistics.
@@ -48,14 +66,17 @@ fn basic_stats_table(combatant: &Combatant) -> Table<'_> {
 /// [`StatBlock`]: crate::widgets::StatBlock
 #[derive(Debug)]
 pub struct CombatantBlock<'a> {
+    /// The combatant's group color, if any.
+    group_color: Option<Rgb>,
+
     /// The combatant to display.
     combatant: &'a Combatant,
 }
 
 impl<'a> CombatantBlock<'a> {
     /// Create a new [`CombatantBlock`] widget.
-    pub fn new(combatant: &'a Combatant) -> Self {
-        Self { combatant }
+    pub fn new(group_color: Option<Rgb>, combatant: &'a Combatant) -> Self {
+        Self { group_color, combatant }
     }
 }
 
@@ -74,7 +95,7 @@ impl Widget for CombatantBlock<'_> {
             conditions,
             ability_scores,
         ] = Layout::vertical([
-            Constraint::Length(1), // name
+            Constraint::Length(2), // identifiers
             Constraint::Length(4), // basic stats
             Constraint::Fill(1),   // conditions
             Constraint::Length(7), // ability scores
@@ -84,7 +105,7 @@ impl Widget for CombatantBlock<'_> {
             .spacing(1)
             .areas(area);
 
-        basic_status_text(self.combatant).render(name, buf);
+        identifiers(self.group_color, self.combatant).render(name, buf);
         Widget::render(basic_stats_table(self.combatant), basic_stats, buf);
         FullConditions::new(self.combatant).render(conditions, buf);
         AbilityScores::new(&self.combatant.kind).render(ability_scores, buf);

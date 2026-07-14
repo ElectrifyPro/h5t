@@ -2,7 +2,7 @@ mod state;
 
 use bimap::BiMap;
 use crate::{
-    theme::THEME,
+    theme::{Rgb, THEME},
     view::LABELS,
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
@@ -10,7 +10,7 @@ use crossterm::event::{read, Event, KeyCode};
 use h5t_core::Tracker;
 use ratatui::{prelude::*, widgets::canvas::Canvas};
 use state::{AfterKey, ApplyCondition, ApplyDamage, ApplySavingThrowDamage, SelectAction, State, UseMovement};
-use std::{collections::HashSet, ops::{Deref, DerefMut}};
+use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 
 /// The info block to show in the UI.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -52,6 +52,9 @@ pub struct Battle<B: Backend> {
     /// The underlying tracker.
     pub tracker: Tracker,
 
+    /// Groups that combatants can be assigned to.
+    pub groups: HashMap<String, Rgb>,
+
     /// Which info block to show.
     info_block: InfoBlock,
 
@@ -69,10 +72,11 @@ pub struct Battle<B: Backend> {
 
 impl<B: Backend> Battle<B> {
     /// Wrap a [`Tracker`] in a new [`Battle`].
-    pub fn new(terminal: Terminal<B>, tracker: Tracker) -> Self {
+    pub fn new(terminal: Terminal<B>, tracker: Tracker, groups: HashMap<String, Rgb>) -> Self {
         Self {
             terminal,
             tracker,
+            groups,
             info_block: InfoBlock::CombatantCard,
             state: None,
             scroll_index: 0,
@@ -124,10 +128,13 @@ impl<B: Backend> Battle<B> {
                         continue;
                     }
 
-                    let data_iter = selected
+                    let combatant_iter = selected
                         .into_iter()
                         .map(|idx| (idx, &self.combatants[idx]));
-                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(data_iter)));
+                    self.state = Some(State::ApplySavingThrowDamage(ApplySavingThrowDamage::new(
+                        combatant_iter,
+                        &self.groups,
+                    )));
                 },
                 KeyCode::Char('m') => {
                     self.state = Some(State::UseMovement(UseMovement::new()));
@@ -185,9 +192,9 @@ impl<B: Backend> Battle<B> {
 
             // show tracker
             let tracker_widget = if let Some(label) = self.label_state.as_ref() {
-                TrackerWidget::with_labels(&self.tracker, self.scroll_index, label)
+                TrackerWidget::with_labels(&self.tracker, &self.groups, self.scroll_index, label)
             } else {
-                TrackerWidget::new(&self.tracker, self.scroll_index)
+                TrackerWidget::new(&self.tracker, &self.groups, self.scroll_index)
             };
             frame.render_widget(tracker_widget, tracker_area);
 
@@ -197,7 +204,10 @@ impl<B: Backend> Battle<B> {
                 frame.render_widget(StatBlock::new(&combatant.kind), info_area);
             } else {
                 // show combatant card
-                frame.render_widget(CombatantBlock::new(combatant), info_area);
+                let group_color = combatant.group
+                        .as_ref()
+                        .and_then(|group| self.groups.get(group).copied());
+                frame.render_widget(CombatantBlock::new(group_color, combatant), info_area);
             }
 
             let Some(state) = self.state.as_ref() else {
@@ -324,6 +334,6 @@ impl<B: Backend> DerefMut for Battle<B> {
 
 impl<B: Backend> Widget for Battle<B> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        TrackerWidget::new(&self.tracker, self.scroll_index).render(area, buf);
+        TrackerWidget::new(&self.tracker, &self.groups, self.scroll_index).render(area, buf);
     }
 }

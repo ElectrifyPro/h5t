@@ -1,4 +1,8 @@
-use crate::{theme::THEME, view::battle::LabelModeState, widgets::{CompactConditions, HitPoints}};
+use crate::{
+    theme::{Rgb, THEME},
+    view::battle::LabelModeState,
+    widgets::{CompactConditions, HitPoints},
+};
 use h5t_core::{
     resource::{
         Action,
@@ -14,6 +18,7 @@ use h5t_core::{
 };
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
+use std::collections::HashMap;
 
 /// Creates a [`Text`] widget for displaying the character's remaining movement.
 fn movement_speed(combatant: &Combatant) -> Line<'static> {
@@ -86,13 +91,23 @@ fn action_line(pool: &ResourcePool) -> Line<'static> {
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
 fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
     /// Builds a table [`Row`] for a combatant.
-    fn combatant_row(label: Option<char>, combatant: &Combatant) -> Row<'_> {
+    fn combatant_row<'a>(
+        label: Option<char>,
+        group_colors: &HashMap<String, Rgb>,
+        combatant: &'a Combatant,
+    ) -> Row<'a> {
         let label_text = label
             .map(|l| Text::from(format!("{}", l)).bold())
             .unwrap_or_default();
+        let combatant_group_color = combatant.group
+            .as_ref()
+            .and_then(|group| group_colors.get(group))
+            .copied()
+            .unwrap_or(THEME.foreground);
+
         Row::new([
             label_text,
-            Text::from(combatant.name()),
+            Text::styled(combatant.name(), combatant_group_color),
             movement_speed(combatant).into(),
             action_line(&combatant.resource_pool).into(),
             HitPoints::new(combatant).line().into(),
@@ -116,7 +131,7 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
                     (None, false)
                 };
 
-                let row = combatant_row(label, combatant);
+                let row = combatant_row(label, &widget.groups, combatant);
                 let mut style = Style::default().fg(THEME.foreground.into());
                 if is_label_selected {
                     style = style.bold();
@@ -173,6 +188,9 @@ pub struct Tracker<'a> {
     /// The tracker to display.
     pub tracker: &'a CoreTracker,
 
+    /// Groups that combatants can be assigned to.
+    pub groups: &'a HashMap<String, Rgb>,
+
     /// Index of the first combatant listed in the tracker, used to scroll through the initiative
     /// tracker.
     pub scroll_index: usize,
@@ -183,17 +201,32 @@ pub struct Tracker<'a> {
 
 impl<'a> Tracker<'a> {
     /// Create a new [`Tracker`] widget.
-    pub fn new(tracker: &'a CoreTracker, scroll_index: usize) -> Self {
-        Self { tracker, scroll_index, label_state: None }
+    pub fn new(
+        tracker: &'a CoreTracker,
+        groups: &'a HashMap<String, Rgb>,
+        scroll_index: usize,
+    ) -> Self {
+        Self {
+            tracker,
+            groups,
+            scroll_index,
+            label_state: None,
+        }
     }
 
     /// Create a new [`Tracker`] widget with the given labels.
     pub fn with_labels(
         tracker: &'a CoreTracker,
+        groups: &'a HashMap<String, Rgb>,
         scroll_index: usize,
         label_state: &'a LabelModeState,
     ) -> Self {
-        Self { tracker, scroll_index, label_state: Some(label_state) }
+        Self {
+            tracker,
+            groups,
+            scroll_index,
+            label_state: Some(label_state),
+        }
     }
 }
 

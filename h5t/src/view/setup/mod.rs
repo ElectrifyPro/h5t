@@ -8,7 +8,7 @@ use state::{AddCombatant, AfterKey, AssignGroup, NewGroup, RollInitiative, State
 use std::collections::HashMap;
 
 /// The setup data for the battle.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SetupInner {
     /// Groups that combatants can be assigned to.
     pub groups: HashMap<String, Rgb>,

@@ -11,16 +11,15 @@ use std::collections::HashMap;
 fn combatant_table(widget: Setup) -> Table {
     /// Builds a table [`Row`] for a combatant.
     fn combatant_row<'a>(group_colors: &HashMap<String, Rgb>, combatant: &'a Combatant) -> Row<'a> {
+        let combatant_group_color = combatant.group
+            .as_ref()
+            .and_then(|group| group_colors.get(group))
+            .copied()
+            .unwrap_or(THEME.foreground);
+
         Row::new([
-            Text::from(combatant.name()),
-            Text::styled(
-                combatant.group.as_deref().unwrap_or_default(),
-                combatant.group
-                    .as_ref()
-                    .and_then(|group| group_colors.get(group))
-                    .copied()
-                    .unwrap_or(THEME.foreground),
-            ),
+            Text::styled(combatant.name(), combatant_group_color),
+            Text::styled(combatant.group.as_deref().unwrap_or_default(), combatant_group_color),
             Text::styled(
                 format!("{:+}", combatant.scores().modifiers().dexterity),
                 score_to_color(combatant.scores().dexterity),

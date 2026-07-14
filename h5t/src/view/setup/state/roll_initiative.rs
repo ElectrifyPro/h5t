@@ -1,6 +1,6 @@
 use crate::{
     input::{AfterKey as AfterKeyInner, Charset, GetInput},
-    theme::THEME,
+    theme::{Rgb, THEME},
     view::{LABELS, setup::SetupInner},
     widgets::{popup::Popup, SizedTable},
 };
@@ -32,6 +32,9 @@ struct CombatantData {
     /// The combatant's name.
     name: String,
 
+    /// The combatant's group color, if any.
+    group_color: Option<Rgb>,
+
     /// The combatant's dexterity modifier.
     dexterity: Modifier,
 
@@ -41,10 +44,11 @@ struct CombatantData {
 
 impl CombatantData {
     /// Create a [`CombatantData`] with a combatant.
-    fn new((idx, combatant): (usize, &Combatant)) -> Self {
+    fn new(idx: usize, combatant: &Combatant, group_color: Option<Rgb>) -> Self {
         Self {
             idx,
             name: combatant.name().to_string(),
+            group_color,
             dexterity: combatant.scores().modifiers().dexterity,
             initiative: None,
         }
@@ -72,7 +76,13 @@ impl RollInitiative {
             combatants: inner.combatants
                 .iter()
                 .enumerate()
-                .map(CombatantData::new)
+                .map(|(idx, combatant)| CombatantData::new(
+                    idx,
+                    combatant,
+                    combatant.group
+                        .as_ref()
+                        .and_then(|group| inner.groups.get(group).copied()),
+                ))
                 .collect(),
             initiative: GetInput::new("Initiative", 3, Charset::Numeric)
                 .prefix("d20 ="),
@@ -119,9 +129,10 @@ impl RollInitiative {
                         style = style.bg(THEME.select.into());
                     }
 
+                    let combatant_group_color = data.group_color.unwrap_or(THEME.foreground);
                     Row::new([
                         Text::from(format!("{}", label)).bold(),
-                        Text::raw(&data.name),
+                        Text::styled(&data.name, combatant_group_color),
                         Text::raw(fmt_dice_expr(data.dexterity)),
                         Text::raw(data.initiative.map(|value| value.to_string()).unwrap_or_default()),
                     ])
