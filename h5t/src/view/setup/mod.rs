@@ -23,7 +23,7 @@ pub struct Setup<B: Backend> {
     pub terminal: Terminal<B>,
 
     /// The setup data for the battle.
-    inner: SetupInner,
+    pub inner: SetupInner,
 
     /// The currently active state.
     state: Option<State>,
@@ -31,12 +31,6 @@ pub struct Setup<B: Backend> {
     /// Index of the first combatant listed in the tracker, used to scroll through the initiative
     /// tracker.
     scroll_index: usize,
-}
-
-impl<B: Backend> Drop for Setup<B> {
-    fn drop(&mut self) {
-        ratatui::restore();
-    }
 }
 
 impl<B: Backend> Setup<B> {

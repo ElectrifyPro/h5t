@@ -67,12 +67,6 @@ pub struct Battle<B: Backend> {
     label_state: Option<LabelModeState>,
 }
 
-impl<B: Backend> Drop for Battle<B> {
-    fn drop(&mut self) {
-        ratatui::restore();
-    }
-}
-
 impl<B: Backend> Battle<B> {
     /// Wrap a [`Tracker`] in a new [`Battle`].
     pub fn new(terminal: Terminal<B>, tracker: Tracker) -> Self {
