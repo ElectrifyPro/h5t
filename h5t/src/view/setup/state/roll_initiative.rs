@@ -7,7 +7,6 @@ use crate::{
 use crossterm::event::{KeyCode, KeyEvent};
 use h5t_core::{ability::Modifier, Combatant};
 use ratatui::{layout::Flex, prelude::*, widgets::*};
-
 use super::AfterKey;
 
 /// Formats a dice expression in the form `d20 +/- <modifier>`.

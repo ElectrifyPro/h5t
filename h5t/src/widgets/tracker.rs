@@ -93,21 +93,15 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
     /// Builds a table [`Row`] for a combatant.
     fn combatant_row<'a>(
         label: Option<char>,
-        group_colors: &HashMap<String, Rgb>,
+        group_color: Rgb,
         combatant: &'a Combatant,
     ) -> Row<'a> {
         let label_text = label
             .map(|l| Text::from(format!("{}", l)).bold())
             .unwrap_or_default();
-        let combatant_group_color = combatant.group
-            .as_ref()
-            .and_then(|group| group_colors.get(group))
-            .copied()
-            .unwrap_or(THEME.foreground);
-
         Row::new([
             label_text,
-            Text::styled(combatant.name(), combatant_group_color),
+            Text::styled(combatant.name(), group_color),
             movement_speed(combatant).into(),
             action_line(&combatant.resource_pool).into(),
             HitPoints::new(combatant).line().into(),
@@ -131,7 +125,12 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
                     (None, false)
                 };
 
-                let row = combatant_row(label, &widget.groups, combatant);
+                let group_color = combatant.group
+                    .as_ref()
+                    .and_then(|group| widget.groups.get(group))
+                    .copied()
+                    .unwrap_or(THEME.foreground);
+                let row = combatant_row(label, group_color, combatant);
                 let mut style = Style::default().fg(THEME.foreground.into());
                 if is_label_selected {
                     style = style.bold();

@@ -5,21 +5,14 @@ use crate::{
 };
 use h5t_core::Combatant;
 use ratatui::{prelude::*, widgets::*};
-use std::collections::HashMap;
 
 /// Creates a [`Table`] widget for displaying the combatants in the tracker.
 fn combatant_table(widget: Setup) -> Table {
     /// Builds a table [`Row`] for a combatant.
-    fn combatant_row<'a>(group_colors: &HashMap<String, Rgb>, combatant: &'a Combatant) -> Row<'a> {
-        let combatant_group_color = combatant.group
-            .as_ref()
-            .and_then(|group| group_colors.get(group))
-            .copied()
-            .unwrap_or(THEME.foreground);
-
+    fn combatant_row<'a>(group_color: Rgb, combatant: &'a Combatant) -> Row<'a> {
         Row::new([
-            Text::styled(combatant.name(), combatant_group_color),
-            Text::styled(combatant.group.as_deref().unwrap_or_default(), combatant_group_color),
+            Text::styled(combatant.name(), group_color),
+            Text::styled(combatant.group.as_deref().unwrap_or_default(), group_color),
             Text::styled(
                 format!("{:+}", combatant.scores().modifiers().dexterity),
                 score_to_color(combatant.scores().dexterity),
@@ -39,7 +32,12 @@ fn combatant_table(widget: Setup) -> Table {
             .map(|combatant| {
                 let is_selected = false;
 
-                let row = combatant_row(&widget.inner.groups, combatant);
+                let group_color = combatant.group
+                    .as_ref()
+                    .and_then(|group| widget.inner.groups.get(group))
+                    .copied()
+                    .unwrap_or(THEME.foreground);
+                let row = combatant_row(group_color, combatant);
                 let mut style = Style::default().fg(THEME.foreground.into());
 
                 let mut bg_color = None;
