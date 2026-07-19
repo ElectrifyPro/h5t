@@ -78,16 +78,16 @@ fn main() {
     ];
     combatants.splice(0..0, pcs);
 
-    let terminal = ratatui::init();
+    let mut terminal = ratatui::init();
 
-    let mut setup = Setup::new(terminal);
-    setup.run();
+    let mut setup = Setup::new();
+    setup.run(&mut terminal);
+
+    let inner = setup.inner;
 
     // TODO: will crash if there are no combatants, please improve
-    let Setup { terminal, inner, .. } = setup;
-
-    let mut tracker = Battle::new(terminal, Tracker::new(inner.combatants), inner.groups);
-    tracker.run();
+    let mut tracker = Battle::new(Tracker::new(inner.combatants), inner.groups);
+    tracker.run(&mut terminal);
 
     ratatui::restore();
 }

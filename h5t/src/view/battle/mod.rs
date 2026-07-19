@@ -45,10 +45,7 @@ pub struct LabelModeState {
 /// The battle view, used in combat or when strict initiative order is needed.
 ///
 /// The underlying [`Tracker`] is used for rules management.
-pub struct Battle<B: Backend> {
-    /// The terminal to draw to.
-    pub terminal: Terminal<B>,
-
+pub struct Battle {
     /// The underlying tracker.
     pub tracker: Tracker,
 
@@ -70,11 +67,10 @@ pub struct Battle<B: Backend> {
     label_state: Option<LabelModeState>,
 }
 
-impl<B: Backend> Battle<B> {
+impl Battle {
     /// Wrap a [`Tracker`] in a new [`Battle`].
-    pub fn new(terminal: Terminal<B>, tracker: Tracker, groups: HashMap<String, Rgb>) -> Self {
+    pub fn new(tracker: Tracker, groups: HashMap<String, Rgb>) -> Self {
         Self {
-            terminal,
             tracker,
             groups,
             info_block: InfoBlock::CombatantCard,
@@ -85,9 +81,9 @@ impl<B: Backend> Battle<B> {
     }
 
     /// Run off the tracker until the user exits.
-    pub fn run(&mut self) {
+    pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) {
         loop {
-            self.draw().unwrap();
+            self.draw(terminal).unwrap();
 
             // wait for user input
             let Ok(Event::Key(key)) = read() else {
@@ -109,21 +105,21 @@ impl<B: Backend> Battle<B> {
                     self.scroll_index += 1;
                 },
                 KeyCode::Char('c') => {
-                    let selected = self.enter_label_mode();
+                    let selected = self.enter_label_mode(terminal);
                     if selected.is_empty() {
                         continue;
                     }
                     self.state = Some(State::ApplyCondition(ApplyCondition::new(selected)));
                 },
                 KeyCode::Char('d') => {
-                    let selected = self.enter_label_mode();
+                    let selected = self.enter_label_mode(terminal);
                     if selected.is_empty() {
                         continue;
                     }
                     self.state = Some(State::ApplyDamage(ApplyDamage::new(selected)));
                 },
                 KeyCode::Char('D') => {
-                    let selected = self.enter_label_mode();
+                    let selected = self.enter_label_mode(terminal);
                     if selected.is_empty() {
                         continue;
                     }
@@ -175,8 +171,11 @@ impl<B: Backend> Battle<B> {
     }
 
     /// Draw the tracker to the terminal.
-    pub fn draw(&mut self) -> Result<ratatui::CompletedFrame<'_>, B::Error> {
-        self.terminal.draw(|frame| {
+    pub fn draw<'a, B: Backend>(
+        &mut self,
+        terminal: &'a mut Terminal<B>,
+    ) -> Result<ratatui::CompletedFrame<'a>, B::Error> {
+        terminal.draw(|frame| {
             // clear the area
             frame.render_widget(
                 Canvas::default()
@@ -225,8 +224,8 @@ impl<B: Backend> Battle<B> {
     ///
     /// This function blocks until the user selects the combatants and presses the `Enter` key, and
     /// returns the indices of the selected combatants.
-    pub fn enter_label_mode(&mut self) -> HashSet<usize> {
-        let size = self.terminal.size().unwrap();
+    pub fn enter_label_mode<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> HashSet<usize> {
+        let size = terminal.size().unwrap();
 
         // map as many labels as possible to combatants in the visible window. the window will never
         // be larger than the maximum possible number of combatants.
@@ -249,7 +248,7 @@ impl<B: Backend> Battle<B> {
         loop {
             // render tracker with labels
             self.label_state = Some(label_state);
-            self.draw().unwrap();
+            self.draw(terminal).unwrap();
             label_state = self.label_state.take().unwrap();
 
             // wait for user input
@@ -318,7 +317,8 @@ impl<B: Backend> Battle<B> {
     }
 }
 
-impl<B: Backend> Deref for Battle<B> {
+// TODO: Deref really does not make sense
+impl Deref for Battle {
     type Target = Tracker;
 
     fn deref(&self) -> &Self::Target {
@@ -326,13 +326,13 @@ impl<B: Backend> Deref for Battle<B> {
     }
 }
 
-impl<B: Backend> DerefMut for Battle<B> {
+impl DerefMut for Battle {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.tracker
     }
 }
 
-impl<B: Backend> Widget for Battle<B> {
+impl Widget for Battle {
     fn render(self, area: Rect, buf: &mut Buffer) {
         TrackerWidget::new(&self.tracker, &self.groups, self.scroll_index).render(area, buf);
     }

@@ -18,10 +18,7 @@ pub struct SetupInner {
 }
 
 /// The setup view, used to setup and add combatants, and roll initiative order.
-pub struct Setup<B: Backend> {
-    /// The terminal to draw to.
-    pub terminal: Terminal<B>,
-
+pub struct Setup {
     /// The setup data for the battle.
     pub inner: SetupInner,
 
@@ -33,11 +30,10 @@ pub struct Setup<B: Backend> {
     scroll_index: usize,
 }
 
-impl<B: Backend> Setup<B> {
+impl Setup {
     /// Create a new [`Setup`] view.
-    pub fn new(terminal: Terminal<B>) -> Self {
+    pub fn new() -> Self {
         Self {
-            terminal,
             inner: SetupInner {
                 groups: HashMap::new(),
                 combatants: vec![],
@@ -47,10 +43,10 @@ impl<B: Backend> Setup<B> {
         }
     }
 
-    /// Run off the tracker until the user exits.
-    pub fn run(&mut self) {
+    /// Run off the setup view until the user exits.
+    pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) {
         loop {
-            self.draw().unwrap();
+            self.draw(terminal).unwrap();
 
             // wait for user input
             let Ok(Event::Key(key)) = read() else {
@@ -107,9 +103,12 @@ impl<B: Backend> Setup<B> {
         }
     }
 
-    /// Draw the tracker to the terminal.
-    pub fn draw(&mut self) -> Result<ratatui::CompletedFrame<'_>, B::Error> {
-        self.terminal.draw(|frame| {
+    /// Draw the tracker to the given [`Terminal`].
+    pub fn draw<'a, B: Backend>(
+        &mut self,
+        terminal: &'a mut Terminal<B>,
+    ) -> Result<ratatui::CompletedFrame<'a>, B::Error> {
+        terminal.draw(|frame| {
             // clear the area
             frame.render_widget(
                 Canvas::default()
