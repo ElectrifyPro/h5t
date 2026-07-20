@@ -7,9 +7,18 @@ use crate::{
     widgets::{max_combatants, CombatantBlock, StatBlock, Tracker as TrackerWidget},
 };
 use crossterm::event::{read, Event, KeyCode};
-use h5t_core::Tracker;
+use h5t_core::{Health, Tracker};
 use ratatui::{prelude::*, widgets::canvas::Canvas};
-use state::{AfterKey, ApplyCondition, ApplyDamage, ApplySavingThrowDamage, SelectAction, State, UseMovement};
+use state::{
+    AfterKey,
+    ApplyCondition,
+    ApplyDamage,
+    ApplyDeathSavingThrow,
+    ApplySavingThrowDamage,
+    SelectAction,
+    State,
+    UseMovement,
+};
 use std::{collections::{HashMap, HashSet}, ops::{Deref, DerefMut}};
 
 /// The info block to show in the UI.
@@ -154,14 +163,33 @@ impl Battle {
                 },
                 KeyCode::Char('n') => {
                     self.next_turn();
+
+                    // trigger death save state
+                    let current_health = self.current_combatant().health;
+                    if let Health::Downed(counts) = current_health {
+                        self.state = Some(State::ApplyDeathSavingThrow(ApplyDeathSavingThrow::new(
+                            self.turn,
+                            counts,
+                        )));
+                    }
                 },
                 KeyCode::Char('N') => {
                     // skip all dead combatants
                     loop {
                         self.next_turn();
-                        if self.current_combatant().hit_points > 0 {
+                        // TODO: loop forever if all dead
+                        if self.current_combatant().health.active() {
                             break;
                         }
+                    }
+
+                    // trigger death save state
+                    let current_health = self.current_combatant().health;
+                    if let Health::Downed(counts) = current_health {
+                        self.state = Some(State::ApplyDeathSavingThrow(ApplyDeathSavingThrow::new(
+                            self.turn,
+                            counts,
+                        )));
                     }
                 },
                 KeyCode::Char('q') => break,

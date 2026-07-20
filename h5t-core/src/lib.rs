@@ -4,6 +4,7 @@ pub mod character;
 pub mod class;
 pub mod condition;
 pub mod damage;
+pub mod health;
 pub mod monster;
 pub mod resource;
 pub mod speed;
@@ -17,6 +18,7 @@ pub use class::ClassKind;
 pub use condition::{Condition, ConditionKind, ConditionDuration};
 pub use damage::{DamageKind, MagicKind};
 use enumset::EnumSet;
+pub use health::{DeathSaveCount, Health};
 pub use monster::Monster;
 use resource::{BonusAction, Reaction, Resource, ResourcePool};
 pub use speed::Speed;
@@ -50,8 +52,8 @@ pub struct Combatant {
     /// The combatant's conditions.
     pub conditions: Vec<Condition>,
 
-    /// The combatant's current hit points.
-    pub hit_points: i32,
+    /// The combatant's current health state.
+    pub health: Health,
 
     /// The number of resources available to the combatant, including action count, bonus action
     /// count, reaction count, and resources granted by classes (e.g. Superiority dice) and spells
@@ -119,7 +121,23 @@ impl Combatant {
                 _ => (), // cancel the effect(s)
             }
         }
-        self.hit_points -= amount;
+
+        let max_hit_points = self.max_hit_points();
+        match self.health {
+            Health::Hp(ref mut hp) => match hp.get() - amount {
+                new_hp @ ..=0 if new_hp.abs() >= max_hit_points => self.health = Health::Dead,
+                ..=0 => self.health = Health::Downed(DeathSaveCount::new()),
+                new_hp @ 1.. => *hp = new_hp.try_into().unwrap(),
+            },
+            Health::Downed(ref mut counts) => if amount >= max_hit_points {
+                self.health = Health::Dead;
+            } else {
+                // TODO: critical hit should add two failures
+                counts.failures += 1;
+            },
+            Health::Stabilized => self.health = Health::Downed(DeathSaveCount::new()),
+            Health::Dead => (),
+        }
     }
 }
 
@@ -142,11 +160,11 @@ impl From<Character> for CombatantKind {
 impl From<Character> for Combatant {
     fn from(character: Character) -> Self {
         Self {
+            health: character.hit_points.try_into().unwrap(),
             initiative: None,
             group: None,
-            hit_points: character.hit_points,
-            conditions: Vec::new(),
             kind: character.into(),
+            conditions: Vec::new(),
             resource_pool: ResourcePool::default(),
         }
     }
@@ -161,11 +179,11 @@ impl From<Monster> for CombatantKind {
 impl From<Monster> for Combatant {
     fn from(monster: Monster) -> Self {
         Self {
+            health: monster.hit_points.try_into().unwrap(),
             initiative: None,
             group: None,
-            hit_points: monster.hit_points,
-            conditions: Vec::new(),
             kind: monster.into(),
+            conditions: Vec::new(),
             resource_pool: ResourcePool::default(),
         }
     }
@@ -249,14 +267,17 @@ impl Tracker {
                 }
             });
 
+        // NOTE: changes combatant returned by `self.current_combatant`
         self.turn = (self.turn + 1) % self.combatants.len();
         if self.turn == 0 {
             self.round += 1;
         }
 
-        // restore current combatant's actions at the start of their turn
+        // restore current combatant's actions at the start of their turn if they can act
         // TODO: will reset class and spell things when they shouldn't be reset
-        self.current_combatant_mut().resource_pool = ResourcePool::default();
+        if self.current_combatant().health.conscious() {
+            self.current_combatant_mut().resource_pool = ResourcePool::default();
+        }
     }
 
     /// Get the combatant that is currently taking their turn.

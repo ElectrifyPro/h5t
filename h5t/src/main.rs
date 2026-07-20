@@ -72,7 +72,7 @@ fn main() {
                 level: 1,
             }),
             conditions: vec![],
-            hit_points: 32,
+            health: 32.try_into().unwrap(),
             resource_pool: ResourcePool::default(),
         },
     ];

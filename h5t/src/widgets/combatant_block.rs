@@ -2,24 +2,29 @@ use crate::{
     theme::{Rgb, THEME},
     widgets::{conditions::FullConditions, AbilityScores, HitPoints, fmt_speed},
 };
-use h5t_core::Combatant;
+use h5t_core::{Combatant, Health};
 use ratatui::{prelude::*, widgets::*};
 
+/// Creates a [`Line`] widget for displaying the combatant's name and their health status.
+fn name_and_health(group_color: Rgb, combatant: &Combatant) -> Line<'_> {
+    let status_span = match combatant.health {
+        Health::Hp(_) => return Line::styled(combatant.name(), group_color),
+        Health::Downed { .. } => Span::styled("(Downed)", THEME.warning),
+        Health::Stabilized => Span::styled("(Stabilized)", THEME.success),
+        Health::Dead => Span::styled("(Dead)", THEME.dead)
+    };
+
+    Line::from_iter([
+        Span::styled(combatant.name(), group_color),
+        Span::raw(" "),
+        status_span,
+    ])
+}
+
 /// Creates a [`Text`] widget for displaying the combatant's name, group, and whether they are dead.
-fn identifiers(group_color: Option<Rgb>, combatant: &Combatant) -> Text<'_> {
-    let group_color = group_color.unwrap_or(THEME.foreground);
+fn identifiers(group_color: Rgb, combatant: &Combatant) -> Text<'_> {
     Text::from(vec![
-        Line::from(if combatant.hit_points <= 0 {
-            vec![
-                Span::styled(combatant.name(), group_color),
-                Span::raw(" "),
-                Span::styled("(Dead)", THEME.dead),
-            ]
-        } else {
-            vec![
-                Span::styled(combatant.name(), group_color),
-            ]
-        }),
+        name_and_health(group_color, combatant),
         Line::from(vec![
             Span::raw("Group: "),
             if let Some(group) = &combatant.group {
@@ -105,7 +110,8 @@ impl Widget for CombatantBlock<'_> {
             .spacing(1)
             .areas(area);
 
-        identifiers(self.group_color, self.combatant).render(name, buf);
+        let group_color = self.group_color.unwrap_or(THEME.foreground);
+        identifiers(group_color, self.combatant).render(name, buf);
         Widget::render(basic_stats_table(self.combatant), basic_stats, buf);
         FullConditions::new(self.combatant).render(conditions, buf);
         AbilityScores::new(&self.combatant.kind).render(ability_scores, buf);

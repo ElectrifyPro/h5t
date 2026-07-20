@@ -1,11 +1,13 @@
 pub mod apply_condition;
 pub mod apply_damage;
+pub mod apply_death_saving_throw;
 pub mod apply_saving_throw_damage;
 pub mod select_action;
 pub mod use_movement;
 
 pub use apply_condition::ApplyCondition;
 pub use apply_damage::ApplyDamage;
+pub use apply_death_saving_throw::ApplyDeathSavingThrow;
 pub use apply_saving_throw_damage::ApplySavingThrowDamage;
 pub use select_action::SelectAction;
 pub use use_movement::UseMovement;
@@ -63,6 +65,7 @@ macro_rules! create_state {
 create_state!(
     "Applying a condition to one or more combatants.", ApplyCondition;
     "Applying damage to one or more combatants.", ApplyDamage;
+    "Rolling a death saving throw for a downed combatant.", ApplyDeathSavingThrow;
     "Applying damage to one or more combatants after requiring a saving throw.", ApplySavingThrowDamage;
     "Choosing an action to spend an action point on.", SelectAction;
     "Moving.", UseMovement;

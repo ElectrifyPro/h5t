@@ -14,6 +14,7 @@ use h5t_core::{
         SpeedMultiplier,
     },
     Combatant,
+    Health,
     Tracker as CoreTracker,
 };
 use itertools::Itertools;
@@ -63,9 +64,9 @@ fn action_line(pool: &ResourcePool) -> Line<'static> {
     /// - 4 => "Ax4"
     fn fmt_action(label: &str, count: i32) -> String {
         match count {
-            c if c <= 0 => "   ".to_string(),
+            ..=0 => "   ".to_string(),
             1..=3 => format!("{:<3}", label.repeat(count as usize)),
-            _ => format!("{}x{}", label, count),
+            4.. => format!("{}x{}", label, count),
         }
     }
 
@@ -137,20 +138,21 @@ fn combatant_table<'a>(widget: &'a Tracker) -> Table<'a> {
                 }
 
                 let mut bg_color = None;
-                if combatant.hit_points <= 0 {
-                    bg_color = bg_color
-                        .map(|current| THEME.dead.mix(current))
-                        .or(Some(THEME.dead));
+                let mut mix_in = |color: Rgb| bg_color = bg_color
+                    .map(|current| color.mix(current))
+                    .or(Some(color));
+
+                match combatant.health {
+                    Health::Hp(_) => (),
+                    Health::Downed { .. } => mix_in(THEME.dim().warning),
+                    Health::Stabilized => mix_in(THEME.dim().success),
+                    Health::Dead => mix_in(THEME.dead),
                 }
                 if is_current_turn {
-                    bg_color = bg_color
-                        .map(|current| THEME.primary.mix(current))
-                        .or(Some(THEME.primary));
+                    mix_in(THEME.primary);
                 }
                 if is_label_selected {
-                    bg_color = bg_color
-                        .map(|current| THEME.select.mix(current))
-                        .or(Some(THEME.select));
+                    mix_in(THEME.select);
                 }
 
                 let bg_color = bg_color.unwrap_or(THEME.background);
