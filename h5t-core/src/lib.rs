@@ -134,6 +134,9 @@ impl Combatant {
             } else {
                 // TODO: critical hit should add two failures
                 counts.failures += 1;
+                if counts.failures >= 3 {
+                    self.health = Health::Dead;
+                }
             },
             Health::Stabilized => self.health = Health::Downed(DeathSaveCount::new()),
             Health::Dead => (),
